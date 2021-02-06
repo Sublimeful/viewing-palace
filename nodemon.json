@@ -1,3 +1,5 @@
 {
-    "watch": ["public"]
+    "watch": ["./dist/public"],
+    "ext": "html, css"
+
 }
