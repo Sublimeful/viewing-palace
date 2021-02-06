@@ -1,0 +1,32 @@
+#player
+{
+    padding-bottom: 56.5%;
+    overflow: hidden;
+}
+#playlist
+{
+    padding-bottom: 20%;
+    overflow: hidden;
+}
+#video
+{
+    overflow: auto;
+    float: right;
+    width: 80%;
+}
+#gutter
+{
+    position: relative;
+    height: 100vh;
+    background-color: purple;
+    float: right;
+    width: 0.25%;
+}
+#chat
+{
+    position: relative;
+    float: left;
+    display: flex;
+    width: 19.75%;
+    height: 100vh;
+}
