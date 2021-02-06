@@ -17,10 +17,7 @@ app.get("/", function(req, res) {
 app.use(express.static(__dirname + "/public"))
 
 io.on("connection", (socket: any) => {
-    server.user_count++;
-    socket.on("disconnect", () => {
-        server.user_count--;
-    })
+
 })
 
 http.listen(8080, () => {

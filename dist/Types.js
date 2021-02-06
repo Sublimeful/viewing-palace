@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BUTTON = void 0;
-var BUTTON;
-(function (BUTTON) {
-    BUTTON[BUTTON["ADD_VIDEO"] = 0] = "ADD_VIDEO";
-})(BUTTON || (BUTTON = {}));
-exports.BUTTON = BUTTON;
+exports.Button = void 0;
+var Button;
+(function (Button) {
+    Button[Button["ADD_VIDEO"] = 0] = "ADD_VIDEO";
+})(Button || (Button = {}));
+exports.Button = Button;
 //# sourceMappingURL=Types.js.map

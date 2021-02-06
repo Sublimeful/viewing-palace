@@ -1,6 +1,6 @@
-enum BUTTON
+enum Button
 {
     ADD_VIDEO
 }
 
-export {BUTTON};
+export {Button};

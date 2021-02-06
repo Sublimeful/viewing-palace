@@ -9,17 +9,29 @@
     height: 100vh;
     border: 1px solid red;
 }
-#video-buttons
+#video-add
 {
     height: 50px;
     display: flex;
-    border: 1px solid red;
 }
-#video-button-add
+#video-add-input
+{
+    border: 1px solid white;
+    width: 100%;
+    background-color: transparent;
+    text-align: center;
+    color: white;
+    font-size: larger;
+}
+.video-button
 {
     border-radius: 100%;
     height: 32px;
     width: 32px;
+    border: none;
+    color: white;
+    background-color: #3b3b3b;
+    font-weight: bolder;
 }
 #playlist
 {

@@ -1,10 +1,10 @@
-import { BUTTON } from "../Types";
-function button_clicked(type: BUTTON) {
+import { Button } from "../Types";
+function button_clicked(type: Button) {
     switch (type) {
-        case BUTTON.ADD_VIDEO:
+        case Button.ADD_VIDEO:
+            
 
             break;
-    
         default:
             break;
     }

@@ -12,10 +12,6 @@ app.get("/", function (req, res) {
 });
 app.use(express.static(__dirname + "/public"));
 io.on("connection", (socket) => {
-    server.user_count++;
-    socket.on("disconnect", () => {
-        server.user_count--;
-    });
 });
 http.listen(8080, () => {
     console.log("listening on *:8080");
