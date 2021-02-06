@@ -6,7 +6,7 @@ app.set("port", process.env.PORT || 8080);
 let http = require("http").Server(app);
 
 let io = require("socket.io")(http);
-import S from "./server/server";
+import S from "./server/Server";
 const server = new S();
 
 

@@ -1,4 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const Types_1 = require("../Types");
+function button_clicked(type) {
+    switch (type) {
+        case Types_1.BUTTON.ADD_VIDEO:
+            break;
+        default:
+            break;
+    }
+}
 document.querySelector("#video-button-add").addEventListener("click", () => {
-    console.log("hello world");
 });
-//# sourceMappingURL=buttons.js.map
+//# sourceMappingURL=Buttons.js.map
