@@ -1,5 +1,5 @@
 {
-    "watch": ["dist", "src"],
-    "ext": "html, css, ts"
+    "watch": ["app.js", "public", "src"],
+    "ext": "html, css, js"
 
 }
