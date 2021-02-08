@@ -1,5 +1,4 @@
 import fetch from 'node-fetch'
-import YouTubePlayer from 'youtube-player';
 class Youtube
 {
     static getId(url)
@@ -19,16 +18,6 @@ class Youtube
             var i = url.indexOf("youtu.be/");
             return url.substring(i + 9, i + 9 + 11);
         }
-    }
-    play()
-    {
-        this.playerElem = document.getElementById("player")
-        this.video = document.createElement("div")
-        this.video.id = "video-player";
-        this.playerElem.appendChild(this.video);
-        this.player = YouTubePlayer('video-player')
-        this.player.loadVideoById(this.id)
-        this.player.playVideo();
     }
     constructor(id, title, duration)
     {

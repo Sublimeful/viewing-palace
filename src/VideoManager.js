@@ -3,23 +3,16 @@ class VideoManager
 {
     static queue = [];
     static currentPlaying = null;
+    static io;
     static play(video)
     {
-        switch(video.type)
-        {
-            case "Youtube":
-                console.log("ASDAS")
-                video.play();
-                break;
-        }
+        this.io.emit("play", video)
     }
     static checkCurrentPlaying()
     {
-        console.log("enter")
         if(this.currentPlaying == null)
         {
-            console.log("nothing playing")
-            play(queue[0]);
+            this.play(this.queue[0]);
         }
     }
     static enqueue(userInput)
@@ -36,10 +29,8 @@ class VideoManager
                     return -1;
                 }
             })
-            console.log("ASDASDASASD")
             const request = Youtube.requestData(userInput);
             request.then((videoData) => {
-                console.log("ASDASDAS")
                 this.queue.push(videoData);
                 this.checkCurrentPlaying();
             })
