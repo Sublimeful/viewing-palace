@@ -1,0 +1,2 @@
+
+https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=nMbx8EurE0g&key=AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA

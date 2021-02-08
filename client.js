@@ -1,4 +1,4 @@
-import { connect } from "socket.io-client";
+const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/")
 const input = document.querySelector("#video-add-input");
 
