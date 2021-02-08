@@ -1,25 +1,30 @@
-const express = require("express");
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import VideoManager from "./src/VideoManager.js";
+import path from "path";
 const app = express();
-const http = require("http").Server(app);
-const io = require("socket.io")(http);
-const VideoManager = require("./src/VideoManager");
+const httpServer = createServer();
+const io = new Server(httpServer);
 
-app.get('/', function(req, res) {
-   res.sendFile("public/index.html", {root: __dirname});
+app.get("/", function (req, res) {
+    res.sendFile("public/index.html", { root: path.dirname(".") });
 });
 
 io.on("connection", (socket) => {
+    console.log("user connected!");
     socket.on("addVideo", (userData) => {
+        console.log("ASDAS");
         VideoManager.enqueue(userData.input);
         console.log(VideoManager.queue);
-    })
+    });
     socket.on("disconnect", () => {
         console.log("user disconnected!");
-    })
-})
+    });
+});
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-http.listen(8080, function() {
-   console.log('listening on *:8080');
+httpServer.listen(8080, function () {
+    console.log("listening on *:8080");
 });

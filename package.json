@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "THE viewing palace",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
     "nodemon": "nodemon app.js",

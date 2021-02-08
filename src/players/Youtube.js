@@ -1,5 +1,5 @@
-const fetch = require("node-fetch");
-const YoutubePlayer = require("youtube-player");
+import fetch from 'node-fetch'
+import YouTubePlayer from 'youtube-player';
 class Youtube
 {
     static getId(url)
@@ -26,8 +26,8 @@ class Youtube
         this.video = document.createElement("div")
         this.video.id = "video-player";
         this.playerElem.appendChild(this.video);
-        this.player = YoutubePlayer('youtube-player')
-        this.player.loadVideoById(this.id);
+        this.player = YouTubePlayer('video-player')
+        this.player.loadVideoById(this.id)
         this.player.playVideo();
     }
     constructor(id, title, duration)
@@ -59,4 +59,4 @@ class Youtube
         })
     }
 }
-module.exports = Youtube;
+export default Youtube

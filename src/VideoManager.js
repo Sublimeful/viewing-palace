@@ -1,4 +1,4 @@
-const Youtube = require("./players/Youtube");
+import Youtube from './players/Youtube.js'
 class VideoManager
 {
     static queue = [];
@@ -8,14 +8,17 @@ class VideoManager
         switch(video.type)
         {
             case "Youtube":
-                
+                console.log("ASDAS")
+                video.play();
                 break;
         }
     }
     static checkCurrentPlaying()
     {
+        console.log("enter")
         if(this.currentPlaying == null)
         {
+            console.log("nothing playing")
             play(queue[0]);
         }
     }
@@ -33,9 +36,12 @@ class VideoManager
                     return -1;
                 }
             })
+            console.log("ASDASDASASD")
             const request = Youtube.requestData(userInput);
             request.then((videoData) => {
+                console.log("ASDASDAS")
                 this.queue.push(videoData);
+                this.checkCurrentPlaying();
             })
             .catch((err) => {
                 console.error(err);
@@ -49,4 +55,4 @@ class VideoManager
         }
     }
 }
-module.exports = VideoManager;
+export default VideoManager

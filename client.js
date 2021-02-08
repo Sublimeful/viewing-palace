@@ -5,8 +5,8 @@ const addVideoInput = document.querySelector("#video-add-input");
 addVideoInput.addEventListener("keyup", (event) => {
     if(event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("addVideo", {input: input.value})
-        input.value = "";
+        socket.emit("addVideo", {input: addVideoInput.value})
+        addVideoInput.value = "";
     }
 })
 
