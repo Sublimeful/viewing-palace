@@ -1,7 +1,8 @@
 const fetch = require("node-fetch");
+const YoutubePlayer = require("youtube-player");
 class Youtube
 {
-    static get_id(url)
+    static getId(url)
     {
         if(url.includes("youtube.com/watch?v="))
         {
@@ -19,22 +20,43 @@ class Youtube
             return url.substring(i + 9, i + 9 + 11);
         }
     }
-    constructor(id, duration, title)
+    play()
     {
+        this.playerElem = document.getElementById("player")
+        this.video = document.createElement("div")
+        this.video.id = "video-player";
+        this.playerElem.appendChild(this.video);
+        this.player = YoutubePlayer('youtube-player')
+        this.player.loadVideoById(this.id);
+        this.player.playVideo();
+    }
+    constructor(id, title, duration)
+    {
+        this.type = "Youtube";
         this.id = id;
-        this.duration = duration;
         this.title = title;
-        console.log(title)
-        console.log(duration)
+        this.duration = duration;
     }
-        
-    static from_url(url)
+    static requestData(url)
     {
-        const id = Youtube.get_id(url);
-        const api_key = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
-        const fetch_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${api_key}`
-        return fetch(fetch_url);
+        const id = Youtube.getId(url);
+        const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
+        const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${apiKey}`
+        return new Promise(function(resolve, reject) {
+            fetch(fetchUrl).then(res => res.json())
+            .then(json => {
+                if(json.items[0] == null)
+                {
+                    res = null;
+                    return;
+                }
+                const item = json.items[0];
+                resolve(new Youtube(id, item.snippet.title, item.contentDetails.duration));
+            })
+            .catch(err => {
+                reject(err);
+            })
+        })
     }
-
 }
 module.exports = Youtube;

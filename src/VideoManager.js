@@ -1,29 +1,47 @@
 const Youtube = require("./players/Youtube");
 class VideoManager
 {
-    queue = [];
-    enQueue(url)
+    static queue = [];
+    static currentPlaying = null;
+    static play(video)
     {
-        var youtube_video = /^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/)[a-zA-Z0-9]{11}/;
-        var youtube_playlist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=).+/;
-        if(youtube_video.test(url))
+        switch(video.type)
         {
-            Youtube.from_url(url)
-            .then(res => res.json())
-            .then(json => {
-                if(json.items[0] == null)
+            case "Youtube":
+                
+                break;
+        }
+    }
+    static checkCurrentPlaying()
+    {
+        if(this.currentPlaying == null)
+        {
+            play(queue[0]);
+        }
+    }
+    static enqueue(userInput)
+    {
+        var matchYoutubeVideo = /^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/)[a-zA-Z0-9]{11}/;
+        var matchYoutubePlaylist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=).+/;
+        if(matchYoutubeVideo.test(userInput))
+        {
+            const id = Youtube.getId(userInput);
+            this.queue.forEach(video => {
+                if(video.id == id)
                 {
-                    res = null;
-                    return;
+                    console.error("video already in queue");
+                    return -1;
                 }
-                const item = json.items[0];
-                this.queue.push(new Youtube(id, item.snippet.title, item.contentDetails.duration));
             })
-            .catch(err => {
+            const request = Youtube.requestData(userInput);
+            request.then((videoData) => {
+                this.queue.push(videoData);
+            })
+            .catch((err) => {
                 console.error(err);
             })
         }
-        else if(youtube_playlist.test(url))
+        else if(matchYoutubePlaylist.test(userInput))
         {
         }
         else

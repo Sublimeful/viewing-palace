@@ -3,17 +3,15 @@ const app = express();
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
 const VideoManager = require("./src/VideoManager");
-const videoManager = new VideoManager();
 
 app.get('/', function(req, res) {
    res.sendFile("public/index.html", {root: __dirname});
 });
 
-
 io.on("connection", (socket) => {
-    console.log("user connect!");
-    socket.on("add_video", (data) => {
-        videoManager.enQueue(data.input);
+    socket.on("addVideo", (userData) => {
+        VideoManager.enqueue(userData.input);
+        console.log(VideoManager.queue);
     })
     socket.on("disconnect", () => {
         console.log("user disconnected!");
