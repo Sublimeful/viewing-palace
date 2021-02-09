@@ -1,17 +1,20 @@
-import connect from "socket.io-client";
-import YouTubePlayer from "youtube-player";
+const connect = require("socket.io-client");
+const YouTube = require("./players/YouTube.js")
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
-const currentVideo;
-const playerElem = document.getElementById("player");
+var currentVideo;
 
 socket.on("play", (video) => {
-    currentVideo = video;
-    playerElem.appendChild((document.createElement("div").id = "video-player"));
-    const player = YouTubePlayer("video-player");
-    player.loadVideoById(video.id);
-    player.playVideo();
+    currentVideo = new YouTube(video.id, socket);
 });
+
+socket.on("unpause", (data) => {
+    currentVideo.unpause();
+})
+
+socket.on("pause", (data) => {
+    currentVideo.pause();
+})
 
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {

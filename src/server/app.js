@@ -1,7 +1,7 @@
 import express from "express";
 import {Server} from 'socket.io';
 
-import VideoManager from "./src/VideoManager.js";
+import VideoManager from "./VideoManager.js";
 import path from "path";
 
 const app = express();
@@ -13,12 +13,15 @@ const io = new Server(server);
 VideoManager.io = io
 
 io.on("connection", (socket) => {
-    console.log("user connected!")
+    VideoManager.loadVideo(socket)
     socket.on("addVideo", (data) => {
-        VideoManager.enqueue(data.input);
+        VideoManager.enqueue(data.input, socket);
     })
-    socket.on("disconnect", () => {
-        console.log("user disconnected!")
+    socket.on("pause", (data) => {
+        VideoManager.pause(socket)
+    })
+    socket.on("unpause", (data) => {
+        VideoManager.unpause(socket);
     })
 })
 

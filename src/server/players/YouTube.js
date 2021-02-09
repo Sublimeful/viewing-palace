@@ -1,5 +1,5 @@
 import fetch from 'node-fetch'
-class Youtube
+class YouTube
 {
     static getId(url)
     {
@@ -21,14 +21,14 @@ class Youtube
     }
     constructor(id, title, duration)
     {
-        this.type = "Youtube";
+        this.type = "YouTube";
         this.id = id;
         this.title = title;
         this.duration = duration;
     }
     static requestData(url)
     {
-        const id = Youtube.getId(url);
+        const id = YouTube.getId(url);
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${apiKey}`
         return new Promise(function(resolve, reject) {
@@ -40,7 +40,7 @@ class Youtube
                     return;
                 }
                 const item = json.items[0];
-                resolve(new Youtube(id, item.snippet.title, item.contentDetails.duration));
+                resolve(new YouTube(id, item.snippet.title, item.contentDetails.duration));
             })
             .catch(err => {
                 reject(err);
@@ -48,4 +48,4 @@ class Youtube
         })
     }
 }
-export default Youtube
+export default YouTube
