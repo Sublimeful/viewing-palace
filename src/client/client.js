@@ -6,6 +6,7 @@ var currentVideo;
 
 socket.on("play", (video) => {
     currentVideo = new YouTube(video.id, socket);
+    socket.emit("sync");
 });
 
 socket.on("unpause", (data) => {
