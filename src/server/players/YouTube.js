@@ -1,6 +1,13 @@
 import fetch from 'node-fetch'
 class YouTube
 {
+    constructor(id, title, duration)
+    {
+        this.type = "YouTube";
+        this.id = id;
+        this.title = title;
+        this.duration = duration;
+    }
     static getId(url)
     {
         if(url.includes("youtube.com/watch?v="))
@@ -18,13 +25,6 @@ class YouTube
             var i = url.indexOf("youtu.be/");
             return url.substring(i + 9, i + 9 + 11);
         }
-    }
-    constructor(id, title, duration)
-    {
-        this.type = "YouTube";
-        this.id = id;
-        this.title = title;
-        this.duration = duration;
     }
     static requestData(url)
     {

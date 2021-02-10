@@ -8077,23 +8077,43 @@ exports.default = function (emitter) {
 
 module.exports = exports['default'];
 },{"load-script":30}],57:[function(require,module,exports){
+
+class VideoManager
+{
+    currentVideo;
+    pause()
+    {
+        this.currentVideo.pause();
+    }
+    unpause()
+    {
+        this.currentVideo.unpause();
+    }
+    playNew(video)
+    {
+        // this.currentVideo.destroy();
+        this.currentVideo = video;
+    }
+}
+module.exports = VideoManager;
+},{}],58:[function(require,module,exports){
 const connect = require("socket.io-client");
-const YouTube = require("./players/YouTube.js")
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
-var currentVideo;
+const signInInput = document.querySelector("#sign-in");
+const VideoManager = require("./VideoManager.js");
+const YouTube = require("./players/YouTube.js")
 
-socket.on("play", (video) => {
-    currentVideo = new YouTube(video.id, socket);
+signInInput.addEventListener("keyup", (event) => {
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        if (signInInput.value.trim() != "") {
+            socket.emit("signIn", { username: signInInput.value });
+            signInInput.value = "";
+            signInInput.style.display = "none";
+        }
+    }
 });
-
-socket.on("unpause", (data) => {
-    currentVideo.unpause();
-})
-
-socket.on("pause", (data) => {
-    currentVideo.pause();
-})
 
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
@@ -8103,17 +8123,27 @@ addVideoInput.addEventListener("keyup", (event) => {
     }
 });
 
-},{"./players/YouTube.js":58,"socket.io-client":35}],58:[function(require,module,exports){
+var videoManager = new VideoManager();
+socket.on("play", (data) => {
+    switch(data.video.type)
+    {
+        case "YouTube":
+            console.log(data.video.id)
+            videoManager.playNew(new YouTube(data.video.id, socket));
+            break;
+    }
+});
+socket.on("pause", () => {
+    videoManager.pause();
+})
+
+},{"./VideoManager.js":57,"./players/YouTube.js":59,"socket.io-client":35}],59:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
-    pause() {
-        this.player.pauseVideo();
-    }
-    unpause() {
-        this.player.playVideo();
-    }
     constructor(id, socket) {
+        this.socket = socket;
+        this.id = id;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerContainer.id = "video-player";
@@ -8122,10 +8152,7 @@ class YouTube {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(id);
-        this.player.playVideo();
-        this.socket = socket;
-        this.id = id;
+        this.player.loadVideoById(this.id);
         this.state = -1;
         this.player.on("stateChange", (event) => {
             switch (event.data) {
@@ -8137,6 +8164,10 @@ class YouTube {
                     if(this.state == 2)
                         // Client unpaused video
                         this.socket.emit("unpause");
+                    else if(this.state == -1)
+                    {
+                        // Client first started watching
+                    }
                     break;
                 case 2:
                     if (this.state == 1)
@@ -8150,9 +8181,17 @@ class YouTube {
             }
             this.state = event.data;
         });
+        this.player.playVideo();
+    }
+    pause() {
+        this.player.pauseVideo();
+    }
+    unpause()
+    {
+        this.player.playVideo();
     }
 }
 
 module.exports = YouTube;
 
-},{"youtube-player":55}]},{},[57]);
+},{"youtube-player":55}]},{},[58]);

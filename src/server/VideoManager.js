@@ -1,28 +1,35 @@
 import YouTube from "./players/YouTube.js";
 import Timer from "./players/Timer.js";
 class VideoManager {
-    static queue = [];
-    static currentPlaying = null;
-    static io;
-    static timer = new Timer();
-    static loadVideo(socket) {
-        if (this.currentPlaying != null) socket.emit("play", this.currentPlaying);
+    constructor(io)
+    {
+        this.io = io;
+        this.queue = [];
+        this.currentPlaying = null;
+        this.timer = new Timer();
     }
-    static play(video) {
-        this.io.emit("play", video);
+    //loads a video for a user if there is one
+    loadVideo(socket) {
+        if (this.currentPlaying != null)
+            socket.emit("play", {video: this.currentPlaying});
+    }
+    //loads a new video for all users
+    playNew(video) {
+        this.io.emit("play", {video: video});
         this.currentPlaying = video;
-        timer.resetTimer();
-        timer.startTimer();
+        this.timer.resetTimer();
+        this.timer.startTimer();
     }
-    static unpause(socket) {
+    unpause(socket) {
         socket.broadcast.emit("unpause");
-        timer.startTimer();
+        this.timer.startTimer();
     }
-    static pause(socket) {
+    pause(socket) {
         socket.broadcast.emit("pause");
-        timer.pauseTimer();
+        this.timer.pauseTimer();
     }
-    static enqueue(userInput) {
+    //queues up a video, playnew if no video is on
+    enqueue(userInput) {
         var matchYouTubeVideo = /^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/).{11}/;
         var matchYouTubePlaylist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=).+/;
         if (matchYouTubeVideo.test(userInput)) {
@@ -37,7 +44,7 @@ class VideoManager {
             request
                 .then((video) => {
                     this.queue.push(video);
-                    if (this.currentPlaying == null) this.play(video);
+                    if (this.currentPlaying == null) this.playNew(video);
                 })
                 .catch((err) => {
                     console.error(err);

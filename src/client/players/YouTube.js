@@ -1,13 +1,9 @@
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
-    pause() {
-        this.player.pauseVideo();
-    }
-    unpause() {
-        this.player.playVideo();
-    }
     constructor(id, socket) {
+        this.socket = socket;
+        this.id = id;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerContainer.id = "video-player";
@@ -16,10 +12,7 @@ class YouTube {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(id);
-        this.player.playVideo();
-        this.socket = socket;
-        this.id = id;
+        this.player.loadVideoById(this.id);
         this.state = -1;
         this.player.on("stateChange", (event) => {
             switch (event.data) {
@@ -31,6 +24,10 @@ class YouTube {
                     if(this.state == 2)
                         // Client unpaused video
                         this.socket.emit("unpause");
+                    else if(this.state == -1)
+                    {
+                        // Client first started watching
+                    }
                     break;
                 case 2:
                     if (this.state == 1)
@@ -44,6 +41,14 @@ class YouTube {
             }
             this.state = event.data;
         });
+        this.player.playVideo();
+    }
+    pause() {
+        this.player.pauseVideo();
+    }
+    unpause()
+    {
+        this.player.playVideo();
     }
 }
 

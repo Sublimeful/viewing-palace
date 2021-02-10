@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
-    "nodemon": "nodemon src/server/app.js",
+    "nodemon": "nodemon src/server/server.js",
     "watchify": "watchify src/client/client.js -o public/client.js -v"
   },
   "repository": "Viewing Palace",
