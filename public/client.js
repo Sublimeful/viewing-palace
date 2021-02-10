@@ -8109,8 +8109,13 @@ const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
+const leaderButton = document.querySelector("#leader-btn")
 const VideoManager = require("./VideoManager.js");
 const YouTube = require("./players/YouTube.js")
+
+leaderButton.addEventListener("click", () => {
+    socket.emit("leaderButtonPressed");
+});
 
 signInInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
@@ -8156,6 +8161,12 @@ socket.on("sync", (data) => {
             console.log("%cSYNCED!", 'color: red');
         }
     })
+})
+socket.on("leadered", () => {
+    leaderButton.style.backgroundColor = "green";
+})
+socket.on("unleadered", () => {
+    leaderButton.style.backgroundColor = "";
 })
 },{"./VideoManager.js":57,"./players/YouTube.js":59,"socket.io-client":35}],59:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");

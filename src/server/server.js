@@ -10,43 +10,59 @@ const server = app.listen(8080, () => {
 });
 const io = new Server(server);
 
+var someoneIsLeader = false;
 var videoManager = new VideoManager(io);
 io.on("connection", (socket) => {
     socket.isSignedIn = false;
     videoManager.loadVideo(socket);
     socket.on("addVideo", (data) => {
-        if(socket.isSignedIn == false)
-        {
-            console.log("not signed in")
-            return;
-        }
         videoManager.enqueue(data.input, socket);
     });
     socket.on("pause", () => {
-        if(socket.isSignedIn == false)
+        if(socket.isLeader)
         {
-            console.log("not signed in")
-            return;
+            videoManager.pause(socket);
         }
-        videoManager.pause(socket);
     });
     socket.on("unpause", () => {
-        if(socket.isSignedIn == false)
+        if(socket.isLeader)
         {
-            console.log("not signed in")
-            return;
+            videoManager.unpause(socket);
         }
-        videoManager.unpause(socket);
     });
     socket.on("signIn", (data) => {
         socket.username = data.username;
         socket.isSignedIn = true;
+    })
+    socket.on("leaderButtonPressed", () => {
+        if(socket.isSignedIn)
+        {
+            if(!someoneIsLeader)
+            {
+                socket.isLeader = true;
+                someoneIsLeader = true;
+                socket.emit("leadered");
+            }
+            else if(socket.isLeader)
+            {
+                socket.isLeader = false;
+                someoneIsLeader = false;
+                socket.emit("unleadered")
+            }
+        }
     })
     socket.on("sync", () => {
         if(videoManager.timer.currentTime == null)
             videoManager.timer.startTimer();
         else
             socket.emit("sync", {currentTime: videoManager.timer.getCurrentTime()});
+    })
+    socket.on("disconnect", () => {
+        if(socket.isLeader)
+        {
+            socket.isLeader = false;
+            someoneIsLeader = false;
+        }
     })
 });
 
