@@ -8081,6 +8081,10 @@ module.exports = exports['default'];
 class VideoManager
 {
     currentVideo;
+    seekTo(time)
+    {
+        this.currentVideo.seekTo(time);
+    }
     pause()
     {
         this.currentVideo.pause();
@@ -8093,6 +8097,10 @@ class VideoManager
     {
         // this.currentVideo.destroy();
         this.currentVideo = video;
+    }
+    getCurrentTime()
+    {
+        return this.currentVideo.getCurrentTime();
     }
 }
 module.exports = VideoManager;
@@ -8124,6 +8132,7 @@ addVideoInput.addEventListener("keyup", (event) => {
 });
 
 var videoManager = new VideoManager();
+var syncThreshold = 1000;
 socket.on("play", (data) => {
     switch(data.video.type)
     {
@@ -8136,7 +8145,18 @@ socket.on("play", (data) => {
 socket.on("pause", () => {
     videoManager.pause();
 })
-
+socket.on("unpause", () => {
+    videoManager.unpause();
+})
+socket.on("sync", (data) => {
+    videoManager.getCurrentTime().then((currentTime) => {
+        if(Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold)
+        {
+            videoManager.seekTo(data.currentTime);
+            console.log("%cSYNCED!", 'color: red');
+        }
+    })
+})
 },{"./VideoManager.js":57,"./players/YouTube.js":59,"socket.io-client":35}],59:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
@@ -8153,8 +8173,10 @@ class YouTube {
             width: this.playerElem.clientWidth,
         });
         this.player.loadVideoById(this.id);
-        this.state = -1;
+        this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
+            console.log("from: " + this.state);
+            console.log("to: " + event.data);
             switch (event.data) {
                 case -1:
                     break;
@@ -8164,10 +8186,6 @@ class YouTube {
                     if(this.state == 2)
                         // Client unpaused video
                         this.socket.emit("unpause");
-                    else if(this.state == -1)
-                    {
-                        // Client first started watching
-                    }
                     break;
                 case 2:
                     if (this.state == 1)
@@ -8175,6 +8193,9 @@ class YouTube {
                         this.socket.emit("pause");
                     break;
                 case 3:
+                    if(this.state == -1)
+                        // Client who requested video got video loaded
+                        this.socket.emit("sync");
                     break;
                 case 5:
                     break;
@@ -8182,6 +8203,12 @@ class YouTube {
             this.state = event.data;
         });
         this.player.playVideo();
+        this.syncer = setInterval(() => {
+            if(this.state == 1)
+            {
+                this.socket.emit("sync");
+            }
+        }, 100)
     }
     pause() {
         this.player.pauseVideo();
@@ -8189,6 +8216,14 @@ class YouTube {
     unpause()
     {
         this.player.playVideo();
+    }
+    seekTo(time)
+    {
+        this.player.seekTo(time/1000, true);
+    }
+    getCurrentTime()
+    {
+        return this.player.getCurrentTime();
     }
 }
 

@@ -42,6 +42,12 @@ io.on("connection", (socket) => {
         socket.username = data.username;
         socket.isSignedIn = true;
     })
+    socket.on("sync", () => {
+        if(videoManager.timer.currentTime == null)
+            videoManager.timer.startTimer();
+        else
+            socket.emit("sync", {currentTime: videoManager.timer.getCurrentTime()});
+    })
 });
 
 app.get("/", function (req, res) {

@@ -1,5 +1,5 @@
 import YouTube from "./players/YouTube.js";
-import Timer from "./players/Timer.js";
+import Timer from "./Timer.js";
 class VideoManager {
     constructor(io)
     {
@@ -18,11 +18,10 @@ class VideoManager {
         this.io.emit("play", {video: video});
         this.currentPlaying = video;
         this.timer.resetTimer();
-        this.timer.startTimer();
     }
     unpause(socket) {
         socket.broadcast.emit("unpause");
-        this.timer.startTimer();
+        this.timer.unpauseTimer();
     }
     pause(socket) {
         socket.broadcast.emit("pause");

@@ -25,6 +25,7 @@ addVideoInput.addEventListener("keyup", (event) => {
 });
 
 var videoManager = new VideoManager();
+var syncThreshold = 1000;
 socket.on("play", (data) => {
     switch(data.video.type)
     {
@@ -36,4 +37,16 @@ socket.on("play", (data) => {
 });
 socket.on("pause", () => {
     videoManager.pause();
+})
+socket.on("unpause", () => {
+    videoManager.unpause();
+})
+socket.on("sync", (data) => {
+    videoManager.getCurrentTime().then((currentTime) => {
+        if(Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold)
+        {
+            videoManager.seekTo(data.currentTime);
+            console.log("%cSYNCED!", 'color: red');
+        }
+    })
 })
