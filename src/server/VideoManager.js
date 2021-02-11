@@ -34,6 +34,20 @@ class VideoManager {
         this.currentPlaying = video;
         this.io.emit("play", {video: video});
     }
+    newVideoStarted()
+    {
+        var videoEndedChecker = setInterval(() => {
+            if (this.currentPlaying != null && 
+                this.timer.getCurrentTime() > this.currentPlaying.duration - 1000) {
+                const videoIndex = this.findIndex(this.currentPlaying);
+                this.currentPlaying = null;
+                if (videoIndex + 1 < this.queue.length) {
+                    this.playNew(this.queue[videoIndex + 1]);
+                }
+                clearInterval(videoEndedChecker);
+            }
+        }, 1000);
+    }
     unpause(socket) {
         socket.broadcast.emit("unpause");
         this.timer.unpauseTimer();
@@ -48,19 +62,23 @@ class VideoManager {
         const matchYouTubePlaylist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=).+/;
 
         if (matchYouTubeVideo.test(userInput)) {
-            const id = YouTube.getId(userInput);
-            this.queue.forEach((video) => {
-                if (video.id == id) {
-                    console.error("video already in queue");
-                    return -1;
-                }
-            });
             const request = YouTube.requestData(userInput);
             request
                 .then((video) => {
-                    this.queue.push(video);
-                    this.io.emit("enqueue", {video: video});
-                    if (this.currentPlaying == null) this.playNew(video);
+                    var duplicateVid = false;
+                    this.queue.forEach(otherVid => {
+                        if(video.equals(otherVid))
+                        {
+                            duplicateVid = true;
+                            return;
+                        }
+                    });
+                    if(!duplicateVid)
+                    {
+                        this.queue.push(video);
+                        this.io.emit("enqueue", {video: video});
+                        if (this.currentPlaying == null) this.playNew(video);
+                    }
                 })
                 .catch((err) => {
                     console.error(err);

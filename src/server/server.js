@@ -48,21 +48,12 @@ io.on("connection", (socket) => {
     });
     socket.on("sync", (data) => {
         if (videoManager.timer.currentTime == null) {
-            videoManager.timer.startTimer();
-            var videoEndedChecker = setInterval(() => {
-                if (videoManager.currentPlaying != null) {
-                    if (videoManager.timer.getCurrentTime() > videoManager.currentPlaying.duration - 1000) {
-                        const nextVideoIndex = videoManager.findIndex(videoManager.currentPlaying) + 1;
-                        videoManager.currentPlaying = null;
-                        if (nextVideoIndex < videoManager.queue.length) {
-                            videoManager.playNew(videoManager.queue[nextVideoIndex]);
-                        }
-                        clearInterval(videoEndedChecker);
-                    }
-                }
-            }, 1000);
+            setTimeout(() => {
+                videoManager.timer.startTimer();
+                videoManager.newVideoStarted();
+            }, 1000)
         } else if (socket.isLeader && data != null) {
-                videoManager.timer.setTimer(data.currentTime * 1000);
+            videoManager.timer.setTimer(data.currentTime * 1000);
         } else {
             socket.emit("sync", {
                 currentTime: videoManager.timer.getCurrentTime(),

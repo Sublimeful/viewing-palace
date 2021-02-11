@@ -1,7 +1,6 @@
 
 class Timer {
     // current time in milliseconds(int)
-
     currentTime;
     timeMarker;
     getCurrentTime() {
