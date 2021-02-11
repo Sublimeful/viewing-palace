@@ -51,21 +51,13 @@ io.on("connection", (socket) => {
             videoManager.timer.startTimer();
             var videoEndedChecker = setInterval(() => {
                 if (videoManager.currentPlaying != null) {
-                    console.log("duration: " + videoManager.currentPlaying.duration);
-                    console.log("currentTime: " + videoManager.timer.getCurrentTime());
                     if (videoManager.timer.getCurrentTime() > videoManager.currentPlaying.duration - 1000) {
                         const nextVideoIndex = videoManager.findIndex(videoManager.currentPlaying) + 1;
                         videoManager.currentPlaying = null;
-                        /* 
-                            GOAL:
-                                add video ended event
-                        */
                         if (nextVideoIndex < videoManager.queue.length) {
-                            console.log("LOADED NEXT VIDEO")
                             videoManager.playNew(videoManager.queue[nextVideoIndex]);
                         }
                         clearInterval(videoEndedChecker);
-                        console.log("set to NULL")
                     }
                 }
             }, 1000);

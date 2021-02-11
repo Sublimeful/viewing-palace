@@ -73,7 +73,7 @@ class YouTube {
     }
     destroy()
     {
-        console.log("DESTROY")
+        clearInterval(this.syncer);
         this.player.destroy();
     }
 }

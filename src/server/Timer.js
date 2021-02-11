@@ -23,12 +23,10 @@ class Timer {
         this.timeMarker = new Date().getTime();
     }
     pauseTimer() {
-        console.log("PAUSED")
         this.currentTime += new Date().getTime() - this.timeMarker;
         this.timeMarker = null;
     }
     setTimer(time) {
-        console.log("SET")
         this.currentTime = time;
     }
 }

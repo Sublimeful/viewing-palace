@@ -9041,7 +9041,6 @@ const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
 const YouTube = require("./players/YouTube.js");
-const ElementQueries = require("css-element-queries/src/ResizeSensor");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -9069,11 +9068,10 @@ addVideoInput.addEventListener("keyup", (event) => {
 var videoManager = new VideoManager();
 var syncThreshold = 1000;
 socket.on("play", (data) => {
+    if(videoManager.currentVideo != null)
+        videoManager.currentVideo.destroy();
     switch (data.video.type) {
         case "YouTube":
-            if(videoManager.currentVideo != null)
-                videoManager.currentVideo.destroy();
-            console.log(data.video.id);
             videoManager.playNew(new YouTube(data.video.id, socket));
             break;
     }
@@ -9105,7 +9103,7 @@ socket.on("enqueueAll", (data) => {
     videoManager.enqueue(data.videos);
 })
 
-},{"./VideoManager.js":60,"./players/YouTube.js":62,"css-element-queries/src/ResizeSensor":10,"socket.io-client":38}],62:[function(require,module,exports){
+},{"./VideoManager.js":60,"./players/YouTube.js":62,"socket.io-client":38}],62:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
@@ -9181,7 +9179,7 @@ class YouTube {
     }
     destroy()
     {
-        console.log("DESTROY")
+        clearInterval(this.syncer);
         this.player.destroy();
     }
 }
