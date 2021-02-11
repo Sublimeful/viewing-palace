@@ -1,3 +1,4 @@
+
 class Timer {
     // current time in milliseconds(int)
 
@@ -22,9 +23,13 @@ class Timer {
         this.timeMarker = new Date().getTime();
     }
     pauseTimer() {
+        console.log("PAUSED")
         this.currentTime += new Date().getTime() - this.timeMarker;
         this.timeMarker = null;
     }
-    offsetTimer(offset) {}
+    setTimer(time) {
+        console.log("SET")
+        this.currentTime = time;
+    }
 }
 export default Timer;

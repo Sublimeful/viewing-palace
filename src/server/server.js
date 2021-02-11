@@ -19,51 +19,71 @@ io.on("connection", (socket) => {
         videoManager.enqueue(data.input, socket);
     });
     socket.on("pause", () => {
-        if(socket.isLeader)
-        {
+        if (socket.isLeader) {
             videoManager.pause(socket);
         }
     });
     socket.on("unpause", () => {
-        if(socket.isLeader)
-        {
+        if (socket.isLeader) {
             videoManager.unpause(socket);
         }
     });
     socket.on("signIn", (data) => {
         socket.username = data.username;
         socket.isSignedIn = true;
-    })
+    });
     socket.on("leaderButtonPressed", () => {
-        if(socket.isSignedIn)
-        {
-            if(!someoneIsLeader)
-            {
+        if (socket.isSignedIn) {
+            if (!someoneIsLeader) {
                 socket.isLeader = true;
                 someoneIsLeader = true;
                 socket.emit("leadered");
-            }
-            else if(socket.isLeader)
-            {
+            } else if (socket.isLeader) {
                 socket.isLeader = false;
                 someoneIsLeader = false;
-                socket.emit("unleadered")
+                videoManager.unpause(socket);
+                socket.emit("unleadered");
             }
         }
-    })
-    socket.on("sync", () => {
-        if(videoManager.timer.currentTime == null)
+    });
+    socket.on("sync", (data) => {
+        if (videoManager.timer.currentTime == null) {
             videoManager.timer.startTimer();
-        else
-            socket.emit("sync", {currentTime: videoManager.timer.getCurrentTime()});
-    })
+            var videoEndedChecker = setInterval(() => {
+                if (videoManager.currentPlaying != null) {
+                    console.log("duration: " + videoManager.currentPlaying.duration);
+                    console.log("currentTime: " + videoManager.timer.getCurrentTime());
+                    if (videoManager.timer.getCurrentTime() > videoManager.currentPlaying.duration - 1000) {
+                        const nextVideoIndex = videoManager.findIndex(videoManager.currentPlaying) + 1;
+                        videoManager.currentPlaying = null;
+                        /* 
+                            GOAL:
+                                add video ended event
+                        */
+                        if (nextVideoIndex < videoManager.queue.length) {
+                            console.log("LOADED NEXT VIDEO")
+                            videoManager.playNew(videoManager.queue[nextVideoIndex]);
+                        }
+                        clearInterval(videoEndedChecker);
+                        console.log("set to NULL")
+                    }
+                }
+            }, 1000);
+        } else if (socket.isLeader && data != null) {
+                videoManager.timer.setTimer(data.currentTime * 1000);
+        } else {
+            socket.emit("sync", {
+                currentTime: videoManager.timer.getCurrentTime(),
+            });
+        }
+    });
     socket.on("disconnect", () => {
-        if(socket.isLeader)
-        {
+        if (socket.isLeader) {
             socket.isLeader = false;
             someoneIsLeader = false;
+            videoManager.unpause(socket);
         }
-    })
+    });
 });
 
 app.get("/", function (req, res) {

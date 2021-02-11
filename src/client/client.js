@@ -2,9 +2,10 @@ const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
-const leaderButton = document.querySelector("#leader-btn")
+const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
-const YouTube = require("./players/YouTube.js")
+const YouTube = require("./players/YouTube.js");
+const ElementQueries = require("css-element-queries/src/ResizeSensor");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -32,32 +33,38 @@ addVideoInput.addEventListener("keyup", (event) => {
 var videoManager = new VideoManager();
 var syncThreshold = 1000;
 socket.on("play", (data) => {
-    switch(data.video.type)
-    {
+    switch (data.video.type) {
         case "YouTube":
-            console.log(data.video.id)
+            if(videoManager.currentVideo != null)
+                videoManager.currentVideo.destroy();
+            console.log(data.video.id);
             videoManager.playNew(new YouTube(data.video.id, socket));
             break;
     }
 });
 socket.on("pause", () => {
     videoManager.pause();
-})
+});
 socket.on("unpause", () => {
     videoManager.unpause();
-})
+});
 socket.on("sync", (data) => {
     videoManager.getCurrentTime().then((currentTime) => {
-        if(Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold)
-        {
+        if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
             videoManager.seekTo(data.currentTime);
-            console.log("%cSYNCED!", 'color: red');
+            console.log("%cSYNCED!", "color: red");
         }
-    })
-})
+    });
+});
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";
-})
+});
 socket.on("unleadered", () => {
     leaderButton.style.backgroundColor = "";
+});
+socket.on("enqueue", (data) => {
+    videoManager.enqueue([data.video]);
+});
+socket.on("enqueueAll", (data) => {
+    videoManager.enqueue(data.videos);
 })

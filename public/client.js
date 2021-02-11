@@ -2530,6 +2530,913 @@ Emitter.prototype.hasListeners = function(event){
 };
 
 },{}],8:[function(require,module,exports){
+module.exports = {
+    ResizeSensor: require('./src/ResizeSensor'),
+    ElementQueries: require('./src/ElementQueries')
+};
+
+},{"./src/ElementQueries":9,"./src/ResizeSensor":10}],9:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright Marc J. Schmidt. See the LICENSE file at the top-level
+ * directory of this distribution and at
+ * https://github.com/marcj/css-element-queries/blob/master/LICENSE.
+ */
+(function (root, factory) {
+    if (typeof define === "function" && define.amd) {
+        define(['./ResizeSensor.js'], factory);
+    } else if (typeof exports === "object") {
+        module.exports = factory(require('./ResizeSensor.js'));
+    } else {
+        root.ElementQueries = factory(root.ResizeSensor);
+        root.ElementQueries.listen();
+    }
+}(typeof window !== 'undefined' ? window : this, function (ResizeSensor) {
+
+    /**
+     *
+     * @type {Function}
+     * @constructor
+     */
+    var ElementQueries = function () {
+        //<style> element with our dynamically created styles
+        var cssStyleElement;
+
+        //all rules found for element queries
+        var allQueries = {};
+
+        //association map to identify which selector belongs to a element from the animationstart event.
+        var idToSelectorMapping = [];
+
+        /**
+         *
+         * @param element
+         * @returns {Number}
+         */
+        function getEmSize(element) {
+            if (!element) {
+                element = document.documentElement;
+            }
+            var fontSize = window.getComputedStyle(element, null).fontSize;
+            return parseFloat(fontSize) || 16;
+        }
+
+        /**
+         * Get element size
+         * @param {HTMLElement} element
+         * @returns {Object} {width, height}
+         */
+        function getElementSize(element) {
+            if (!element.getBoundingClientRect) {
+                return {
+                    width: element.offsetWidth,
+                    height: element.offsetHeight
+                }
+            }
+
+            var rect = element.getBoundingClientRect();
+            return {
+                width: Math.round(rect.width),
+                height: Math.round(rect.height)
+            }
+        }
+
+        /**
+         *
+         * @copyright https://github.com/Mr0grog/element-query/blob/master/LICENSE
+         *
+         * @param {HTMLElement} element
+         * @param {*} value
+         * @returns {*}
+         */
+        function convertToPx(element, value) {
+            var numbers = value.split(/\d/);
+            var units = numbers[numbers.length - 1];
+            value = parseFloat(value);
+            switch (units) {
+                case "px":
+                    return value;
+                case "em":
+                    return value * getEmSize(element);
+                case "rem":
+                    return value * getEmSize();
+                // Viewport units!
+                // According to http://quirksmode.org/mobile/tableViewport.html
+                // documentElement.clientWidth/Height gets us the most reliable info
+                case "vw":
+                    return value * document.documentElement.clientWidth / 100;
+                case "vh":
+                    return value * document.documentElement.clientHeight / 100;
+                case "vmin":
+                case "vmax":
+                    var vw = document.documentElement.clientWidth / 100;
+                    var vh = document.documentElement.clientHeight / 100;
+                    var chooser = Math[units === "vmin" ? "min" : "max"];
+                    return value * chooser(vw, vh);
+                default:
+                    return value;
+                // for now, not supporting physical units (since they are just a set number of px)
+                // or ex/ch (getting accurate measurements is hard)
+            }
+        }
+
+        /**
+         *
+         * @param {HTMLElement} element
+         * @param {String} id
+         * @constructor
+         */
+        function SetupInformation(element, id) {
+            this.element = element;
+            var key, option, elementSize, value, actualValue, attrValues, attrValue, attrName;
+
+            var attributes = ['min-width', 'min-height', 'max-width', 'max-height'];
+
+            /**
+             * Extracts the computed width/height and sets to min/max- attribute.
+             */
+            this.call = function () {
+                // extract current dimensions
+                elementSize = getElementSize(this.element);
+
+                attrValues = {};
+
+                for (key in allQueries[id]) {
+                    if (!allQueries[id].hasOwnProperty(key)) {
+                        continue;
+                    }
+                    option = allQueries[id][key];
+
+                    value = convertToPx(this.element, option.value);
+
+                    actualValue = option.property === 'width' ? elementSize.width : elementSize.height;
+                    attrName = option.mode + '-' + option.property;
+                    attrValue = '';
+
+                    if (option.mode === 'min' && actualValue >= value) {
+                        attrValue += option.value;
+                    }
+
+                    if (option.mode === 'max' && actualValue <= value) {
+                        attrValue += option.value;
+                    }
+
+                    if (!attrValues[attrName]) attrValues[attrName] = '';
+                    if (attrValue && -1 === (' ' + attrValues[attrName] + ' ').indexOf(' ' + attrValue + ' ')) {
+                        attrValues[attrName] += ' ' + attrValue;
+                    }
+                }
+
+                for (var k in attributes) {
+                    if (!attributes.hasOwnProperty(k)) continue;
+
+                    if (attrValues[attributes[k]]) {
+                        this.element.setAttribute(attributes[k], attrValues[attributes[k]].substr(1));
+                    } else {
+                        this.element.removeAttribute(attributes[k]);
+                    }
+                }
+            };
+        }
+
+        /**
+         * @param {HTMLElement} element
+         * @param {Object}      id
+         */
+        function setupElement(element, id) {
+            if (!element.elementQueriesSetupInformation) {
+                element.elementQueriesSetupInformation = new SetupInformation(element, id);
+            }
+
+            if (!element.elementQueriesSensor) {
+                element.elementQueriesSensor = new ResizeSensor(element, function () {
+                    element.elementQueriesSetupInformation.call();
+                });
+            }
+        }
+
+        /**
+         * Stores rules to the selector that should be applied once resized.
+         *
+         * @param {String} selector
+         * @param {String} mode min|max
+         * @param {String} property width|height
+         * @param {String} value
+         */
+        function queueQuery(selector, mode, property, value) {
+            if (typeof(allQueries[selector]) === 'undefined') {
+                allQueries[selector] = [];
+                // add animation to trigger animationstart event, so we know exactly when a element appears in the DOM
+
+                var id = idToSelectorMapping.length;
+                cssStyleElement.innerHTML += '\n' + selector + ' {animation: 0.1s element-queries;}';
+                cssStyleElement.innerHTML += '\n' + selector + ' > .resize-sensor {min-width: '+id+'px;}';
+                idToSelectorMapping.push(selector);
+            }
+
+            allQueries[selector].push({
+                mode: mode,
+                property: property,
+                value: value
+            });
+        }
+
+        function getQuery(container) {
+            var query;
+            if (document.querySelectorAll) query = (container) ? container.querySelectorAll.bind(container) : document.querySelectorAll.bind(document);
+            if (!query && 'undefined' !== typeof $$) query = $$;
+            if (!query && 'undefined' !== typeof jQuery) query = jQuery;
+
+            if (!query) {
+                throw 'No document.querySelectorAll, jQuery or Mootools\'s $$ found.';
+            }
+
+            return query;
+        }
+
+        /**
+         * If animationStart didn't catch a new element in the DOM, we can manually search for it
+         */
+        function findElementQueriesElements(container) {
+            var query = getQuery(container);
+
+            for (var selector in allQueries) if (allQueries.hasOwnProperty(selector)) {
+                // find all elements based on the extract query selector from the element query rule
+                var elements = query(selector, container);
+
+                for (var i = 0, j = elements.length; i < j; i++) {
+                    setupElement(elements[i], selector);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param {HTMLElement} element
+         */
+        function attachResponsiveImage(element) {
+            var children = [];
+            var rules = [];
+            var sources = [];
+            var defaultImageId = 0;
+            var lastActiveImage = -1;
+            var loadedImages = [];
+
+            for (var i in element.children) {
+                if (!element.children.hasOwnProperty(i)) continue;
+
+                if (element.children[i].tagName && element.children[i].tagName.toLowerCase() === 'img') {
+                    children.push(element.children[i]);
+
+                    var minWidth = element.children[i].getAttribute('min-width') || element.children[i].getAttribute('data-min-width');
+                    //var minHeight = element.children[i].getAttribute('min-height') || element.children[i].getAttribute('data-min-height');
+                    var src = element.children[i].getAttribute('data-src') || element.children[i].getAttribute('url');
+
+                    sources.push(src);
+
+                    var rule = {
+                        minWidth: minWidth
+                    };
+
+                    rules.push(rule);
+
+                    if (!minWidth) {
+                        defaultImageId = children.length - 1;
+                        element.children[i].style.display = 'block';
+                    } else {
+                        element.children[i].style.display = 'none';
+                    }
+                }
+            }
+
+            lastActiveImage = defaultImageId;
+
+            function check() {
+                var imageToDisplay = false, i;
+
+                for (i in children) {
+                    if (!children.hasOwnProperty(i)) continue;
+
+                    if (rules[i].minWidth) {
+                        if (element.offsetWidth > rules[i].minWidth) {
+                            imageToDisplay = i;
+                        }
+                    }
+                }
+
+                if (!imageToDisplay) {
+                    //no rule matched, show default
+                    imageToDisplay = defaultImageId;
+                }
+
+                if (lastActiveImage !== imageToDisplay) {
+                    //image change
+
+                    if (!loadedImages[imageToDisplay]) {
+                        //image has not been loaded yet, we need to load the image first in memory to prevent flash of
+                        //no content
+
+                        var image = new Image();
+                        image.onload = function () {
+                            children[imageToDisplay].src = sources[imageToDisplay];
+
+                            children[lastActiveImage].style.display = 'none';
+                            children[imageToDisplay].style.display = 'block';
+
+                            loadedImages[imageToDisplay] = true;
+
+                            lastActiveImage = imageToDisplay;
+                        };
+
+                        image.src = sources[imageToDisplay];
+                    } else {
+                        children[lastActiveImage].style.display = 'none';
+                        children[imageToDisplay].style.display = 'block';
+                        lastActiveImage = imageToDisplay;
+                    }
+                } else {
+                    //make sure for initial check call the .src is set correctly
+                    children[imageToDisplay].src = sources[imageToDisplay];
+                }
+            }
+
+            element.resizeSensorInstance = new ResizeSensor(element, check);
+            check();
+        }
+
+        function findResponsiveImages() {
+            var query = getQuery();
+
+            var elements = query('[data-responsive-image],[responsive-image]');
+            for (var i = 0, j = elements.length; i < j; i++) {
+                attachResponsiveImage(elements[i]);
+            }
+        }
+
+        var regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:min|max)-(?:width|height)[\s\t]*?[~$\^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s\{]*)/mgi;
+        var attrRegex = /\[[\s\t]*?(min|max)-(width|height)[\s\t]*?[~$\^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
+
+        /**
+         * @param {String} css
+         */
+        function extractQuery(css) {
+            var match, smatch, attrs, attrMatch;
+
+            css = css.replace(/'/g, '"');
+            while (null !== (match = regex.exec(css))) {
+                smatch = match[1] + match[3];
+                attrs = match[2];
+
+                while (null !== (attrMatch = attrRegex.exec(attrs))) {
+                    queueQuery(smatch, attrMatch[1], attrMatch[2], attrMatch[3]);
+                }
+            }
+        }
+
+        /**
+         * @param {CssRule[]|String} rules
+         */
+        function readRules(rules) {
+            var selector = '';
+
+            if (!rules) {
+                return;
+            }
+
+            if ('string' === typeof rules) {
+                rules = rules.toLowerCase();
+                if (-1 !== rules.indexOf('min-width') || -1 !== rules.indexOf('max-width')) {
+                    extractQuery(rules);
+                }
+            } else {
+                for (var i = 0, j = rules.length; i < j; i++) {
+                    if (1 === rules[i].type) {
+                        selector = rules[i].selectorText || rules[i].cssText;
+                        if (-1 !== selector.indexOf('min-height') || -1 !== selector.indexOf('max-height')) {
+                            extractQuery(selector);
+                        } else if (-1 !== selector.indexOf('min-width') || -1 !== selector.indexOf('max-width')) {
+                            extractQuery(selector);
+                        }
+                    } else if (4 === rules[i].type) {
+                        readRules(rules[i].cssRules || rules[i].rules);
+                    } else if (3 === rules[i].type) {
+                        if(rules[i].styleSheet.hasOwnProperty("cssRules")) {
+                            readRules(rules[i].styleSheet.cssRules);
+                        }
+                    }
+                }
+            }
+        }
+
+        var defaultCssInjected = false;
+
+        /**
+         * Searches all css rules and setups the event listener to all elements with element query rules..
+         */
+        this.init = function () {
+            var animationStart = 'animationstart';
+            if (typeof document.documentElement.style['webkitAnimationName'] !== 'undefined') {
+                animationStart = 'webkitAnimationStart';
+            } else if (typeof document.documentElement.style['MozAnimationName'] !== 'undefined') {
+                animationStart = 'mozanimationstart';
+            } else if (typeof document.documentElement.style['OAnimationName'] !== 'undefined') {
+                animationStart = 'oanimationstart';
+            }
+
+            document.body.addEventListener(animationStart, function (e) {
+                var element = e.target;
+                var styles = element && window.getComputedStyle(element, null);
+                var animationName = styles && styles.getPropertyValue('animation-name');
+                var requiresSetup = animationName && (-1 !== animationName.indexOf('element-queries'));
+
+                if (requiresSetup) {
+                    element.elementQueriesSensor = new ResizeSensor(element, function () {
+                        if (element.elementQueriesSetupInformation) {
+                            element.elementQueriesSetupInformation.call();
+                        }
+                    });
+
+                    var sensorStyles = window.getComputedStyle(element.resizeSensor, null);
+                    var id = sensorStyles.getPropertyValue('min-width');
+                    id = parseInt(id.replace('px', ''));
+                    setupElement(e.target, idToSelectorMapping[id]);
+                }
+            });
+
+            if (!defaultCssInjected) {
+                cssStyleElement = document.createElement('style');
+                cssStyleElement.type = 'text/css';
+                cssStyleElement.innerHTML = '[responsive-image] > img, [data-responsive-image] {overflow: hidden; padding: 0; } [responsive-image] > img, [data-responsive-image] > img {width: 100%;}';
+
+                //safari wants at least one rule in keyframes to start working
+                cssStyleElement.innerHTML += '\n@keyframes element-queries { 0% { visibility: inherit; } }';
+                document.getElementsByTagName('head')[0].appendChild(cssStyleElement);
+                defaultCssInjected = true;
+            }
+
+            for (var i = 0, j = document.styleSheets.length; i < j; i++) {
+                try {
+                    if (document.styleSheets[i].href && 0 === document.styleSheets[i].href.indexOf('file://')) {
+                        console.warn("CssElementQueries: unable to parse local css files, " + document.styleSheets[i].href);
+                    }
+
+                    readRules(document.styleSheets[i].cssRules || document.styleSheets[i].rules || document.styleSheets[i].cssText);
+                } catch (e) {
+                }
+            }
+
+            findResponsiveImages();
+        };
+
+        /**
+         * Go through all collected rules (readRules()) and attach the resize-listener.
+         * Not necessary to call it manually, since we detect automatically when new elements
+         * are available in the DOM. However, sometimes handy for dirty DOM modifications.
+         *
+         * @param {HTMLElement} container only elements of the container are considered (document.body if not set)
+         */
+        this.findElementQueriesElements = function (container) {
+            findElementQueriesElements(container);
+        };
+
+        this.update = function () {
+            this.init();
+        };
+    };
+
+    ElementQueries.update = function () {
+        ElementQueries.instance.update();
+    };
+
+    /**
+     * Removes all sensor and elementquery information from the element.
+     *
+     * @param {HTMLElement} element
+     */
+    ElementQueries.detach = function (element) {
+        if (element.elementQueriesSetupInformation) {
+            //element queries
+            element.elementQueriesSensor.detach();
+            delete element.elementQueriesSetupInformation;
+            delete element.elementQueriesSensor;
+
+        } else if (element.resizeSensorInstance) {
+            //responsive image
+
+            element.resizeSensorInstance.detach();
+            delete element.resizeSensorInstance;
+        }
+    };
+
+    ElementQueries.init = function () {
+        if (!ElementQueries.instance) {
+            ElementQueries.instance = new ElementQueries();
+        }
+
+        ElementQueries.instance.init();
+    };
+
+    var domLoaded = function (callback) {
+        /* Mozilla, Chrome, Opera */
+        if (document.addEventListener) {
+            document.addEventListener('DOMContentLoaded', callback, false);
+        }
+        /* Safari, iCab, Konqueror */
+        else if (/KHTML|WebKit|iCab/i.test(navigator.userAgent)) {
+            var DOMLoadTimer = setInterval(function () {
+                if (/loaded|complete/i.test(document.readyState)) {
+                    callback();
+                    clearInterval(DOMLoadTimer);
+                }
+            }, 10);
+        }
+        /* Other web browsers */
+        else window.onload = callback;
+    };
+
+    ElementQueries.findElementQueriesElements = function (container) {
+        ElementQueries.instance.findElementQueriesElements(container);
+    };
+
+    ElementQueries.listen = function () {
+        domLoaded(ElementQueries.init);
+    };
+
+    return ElementQueries;
+
+}));
+
+},{"./ResizeSensor.js":10}],10:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright Marc J. Schmidt. See the LICENSE file at the top-level
+ * directory of this distribution and at
+ * https://github.com/marcj/css-element-queries/blob/master/LICENSE.
+ */
+(function (root, factory) {
+    if (typeof define === "function" && define.amd) {
+        define(factory);
+    } else if (typeof exports === "object") {
+        module.exports = factory();
+    } else {
+        root.ResizeSensor = factory();
+    }
+}(typeof window !== 'undefined' ? window : this, function () {
+
+    // Make sure it does not throw in a SSR (Server Side Rendering) situation
+    if (typeof window === "undefined") {
+        return null;
+    }
+    // https://github.com/Semantic-Org/Semantic-UI/issues/3855
+    // https://github.com/marcj/css-element-queries/issues/257
+    var globalWindow = typeof window != 'undefined' && window.Math == Math
+        ? window
+        : typeof self != 'undefined' && self.Math == Math
+            ? self
+            : Function('return this')();
+    // Only used for the dirty checking, so the event callback count is limited to max 1 call per fps per sensor.
+    // In combination with the event based resize sensor this saves cpu time, because the sensor is too fast and
+    // would generate too many unnecessary events.
+    var requestAnimationFrame = globalWindow.requestAnimationFrame ||
+        globalWindow.mozRequestAnimationFrame ||
+        globalWindow.webkitRequestAnimationFrame ||
+        function (fn) {
+            return globalWindow.setTimeout(fn, 20);
+        };
+
+    var cancelAnimationFrame = globalWindow.cancelAnimationFrame ||
+        globalWindow.mozCancelAnimationFrame ||
+        globalWindow.webkitCancelAnimationFrame ||
+        function (timer) {
+            globalWindow.clearTimeout(timer);
+        };
+
+    /**
+     * Iterate over each of the provided element(s).
+     *
+     * @param {HTMLElement|HTMLElement[]} elements
+     * @param {Function}                  callback
+     */
+    function forEachElement(elements, callback){
+        var elementsType = Object.prototype.toString.call(elements);
+        var isCollectionTyped = ('[object Array]' === elementsType
+            || ('[object NodeList]' === elementsType)
+            || ('[object HTMLCollection]' === elementsType)
+            || ('[object Object]' === elementsType)
+            || ('undefined' !== typeof jQuery && elements instanceof jQuery) //jquery
+            || ('undefined' !== typeof Elements && elements instanceof Elements) //mootools
+        );
+        var i = 0, j = elements.length;
+        if (isCollectionTyped) {
+            for (; i < j; i++) {
+                callback(elements[i]);
+            }
+        } else {
+            callback(elements);
+        }
+    }
+
+    /**
+    * Get element size
+    * @param {HTMLElement} element
+    * @returns {Object} {width, height}
+    */
+    function getElementSize(element) {
+        if (!element.getBoundingClientRect) {
+            return {
+                width: element.offsetWidth,
+                height: element.offsetHeight
+            }
+        }
+
+        var rect = element.getBoundingClientRect();
+        return {
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+        }
+    }
+
+    /**
+     * Apply CSS styles to element.
+     *
+     * @param {HTMLElement} element
+     * @param {Object} style
+     */
+    function setStyle(element, style) {
+        Object.keys(style).forEach(function(key) {
+            element.style[key] = style[key];
+        });
+    }
+
+    /**
+     * Class for dimension change detection.
+     *
+     * @param {Element|Element[]|Elements|jQuery} element
+     * @param {Function} callback
+     *
+     * @constructor
+     */
+    var ResizeSensor = function(element, callback) {
+        //Is used when checking in reset() only for invisible elements
+        var lastAnimationFrameForInvisibleCheck = 0;
+
+        /**
+         *
+         * @constructor
+         */
+        function EventQueue() {
+            var q = [];
+            this.add = function(ev) {
+                q.push(ev);
+            };
+
+            var i, j;
+            this.call = function(sizeInfo) {
+                for (i = 0, j = q.length; i < j; i++) {
+                    q[i].call(this, sizeInfo);
+                }
+            };
+
+            this.remove = function(ev) {
+                var newQueue = [];
+                for(i = 0, j = q.length; i < j; i++) {
+                    if(q[i] !== ev) newQueue.push(q[i]);
+                }
+                q = newQueue;
+            };
+
+            this.length = function() {
+                return q.length;
+            }
+        }
+
+        /**
+         *
+         * @param {HTMLElement} element
+         * @param {Function}    resized
+         */
+        function attachResizeEvent(element, resized) {
+            if (!element) return;
+            if (element.resizedAttached) {
+                element.resizedAttached.add(resized);
+                return;
+            }
+
+            element.resizedAttached = new EventQueue();
+            element.resizedAttached.add(resized);
+
+            element.resizeSensor = document.createElement('div');
+            element.resizeSensor.dir = 'ltr';
+            element.resizeSensor.className = 'resize-sensor';
+
+            var style = {
+                pointerEvents: 'none',
+                position: 'absolute',
+                left: '0px',
+                top: '0px',
+                right: '0px',
+                bottom: '0px',
+                overflow: 'hidden',
+                zIndex: '-1',
+                visibility: 'hidden',
+                maxWidth: '100%'
+            };
+            var styleChild = {
+                position: 'absolute',
+                left: '0px',
+                top: '0px',
+                transition: '0s',
+            };
+
+            setStyle(element.resizeSensor, style);
+
+            var expand = document.createElement('div');
+            expand.className = 'resize-sensor-expand';
+            setStyle(expand, style);
+
+            var expandChild = document.createElement('div');
+            setStyle(expandChild, styleChild);
+            expand.appendChild(expandChild);
+
+            var shrink = document.createElement('div');
+            shrink.className = 'resize-sensor-shrink';
+            setStyle(shrink, style);
+
+            var shrinkChild = document.createElement('div');
+            setStyle(shrinkChild, styleChild);
+            setStyle(shrinkChild, { width: '200%', height: '200%' });
+            shrink.appendChild(shrinkChild);
+
+            element.resizeSensor.appendChild(expand);
+            element.resizeSensor.appendChild(shrink);
+            element.appendChild(element.resizeSensor);
+
+            var computedStyle = window.getComputedStyle(element);
+            var position = computedStyle ? computedStyle.getPropertyValue('position') : null;
+            if ('absolute' !== position && 'relative' !== position && 'fixed' !== position && 'sticky' !== position) {
+                element.style.position = 'relative';
+            }
+
+            var dirty = false;
+
+            //last request animation frame id used in onscroll event
+            var rafId = 0;
+            var size = getElementSize(element);
+            var lastWidth = 0;
+            var lastHeight = 0;
+            var initialHiddenCheck = true;
+            lastAnimationFrameForInvisibleCheck = 0;
+
+            var resetExpandShrink = function () {
+                var width = element.offsetWidth;
+                var height = element.offsetHeight;
+
+                expandChild.style.width = (width + 10) + 'px';
+                expandChild.style.height = (height + 10) + 'px';
+
+                expand.scrollLeft = width + 10;
+                expand.scrollTop = height + 10;
+
+                shrink.scrollLeft = width + 10;
+                shrink.scrollTop = height + 10;
+            };
+
+            var reset = function() {
+                // Check if element is hidden
+                if (initialHiddenCheck) {
+                    var invisible = element.offsetWidth === 0 && element.offsetHeight === 0;
+                    if (invisible) {
+                        // Check in next frame
+                        if (!lastAnimationFrameForInvisibleCheck){
+                            lastAnimationFrameForInvisibleCheck = requestAnimationFrame(function(){
+                                lastAnimationFrameForInvisibleCheck = 0;
+                                reset();
+                            });
+                        }
+
+                        return;
+                    } else {
+                        // Stop checking
+                        initialHiddenCheck = false;
+                    }
+                }
+
+                resetExpandShrink();
+            };
+            element.resizeSensor.resetSensor = reset;
+
+            var onResized = function() {
+                rafId = 0;
+
+                if (!dirty) return;
+
+                lastWidth = size.width;
+                lastHeight = size.height;
+
+                if (element.resizedAttached) {
+                    element.resizedAttached.call(size);
+                }
+            };
+
+            var onScroll = function() {
+                size = getElementSize(element);
+                dirty = size.width !== lastWidth || size.height !== lastHeight;
+
+                if (dirty && !rafId) {
+                    rafId = requestAnimationFrame(onResized);
+                }
+
+                reset();
+            };
+
+            var addEvent = function(el, name, cb) {
+                if (el.attachEvent) {
+                    el.attachEvent('on' + name, cb);
+                } else {
+                    el.addEventListener(name, cb);
+                }
+            };
+
+            addEvent(expand, 'scroll', onScroll);
+            addEvent(shrink, 'scroll', onScroll);
+
+            // Fix for custom Elements and invisible elements
+            lastAnimationFrameForInvisibleCheck = requestAnimationFrame(function(){
+                lastAnimationFrameForInvisibleCheck = 0;
+                reset();
+            });
+        }
+
+        forEachElement(element, function(elem){
+            attachResizeEvent(elem, callback);
+        });
+
+        this.detach = function(ev) {
+            // clean up the unfinished animation frame to prevent a potential endless requestAnimationFrame of reset
+            if (!lastAnimationFrameForInvisibleCheck) {
+                cancelAnimationFrame(lastAnimationFrameForInvisibleCheck);
+                lastAnimationFrameForInvisibleCheck = 0;
+            }
+            ResizeSensor.detach(element, ev);
+        };
+
+        this.reset = function() {
+            element.resizeSensor.resetSensor();
+        };
+    };
+
+    ResizeSensor.reset = function(element) {
+        forEachElement(element, function(elem){
+            elem.resizeSensor.resetSensor();
+        });
+    };
+
+    ResizeSensor.detach = function(element, ev) {
+        forEachElement(element, function(elem){
+            if (!elem) return;
+            if(elem.resizedAttached && typeof ev === "function"){
+                elem.resizedAttached.remove(ev);
+                if(elem.resizedAttached.length()) return;
+            }
+            if (elem.resizeSensor) {
+                if (elem.contains(elem.resizeSensor)) {
+                    elem.removeChild(elem.resizeSensor);
+                }
+                delete elem.resizeSensor;
+                delete elem.resizedAttached;
+            }
+        });
+    };
+
+    if (typeof MutationObserver !== "undefined") {
+        var observer = new MutationObserver(function (mutations) {
+            for (var i in mutations) {
+                if (mutations.hasOwnProperty(i)) {
+                    var items = mutations[i].addedNodes;
+                    for (var j = 0; j < items.length; j++) {
+                        if (items[j].resizeSensor) {
+                            ResizeSensor.reset(items[j]);
+                        }
+                    }
+                }
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", function (event) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        });
+    }
+
+    return ResizeSensor;
+
+}));
+
+},{}],11:[function(require,module,exports){
 (function (process){(function (){
 /**
  * This is the web browser implementation of `debug()`.
@@ -2718,7 +3625,7 @@ function localstorage() {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"./debug":9,"_process":4}],9:[function(require,module,exports){
+},{"./debug":12,"_process":4}],12:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -2922,7 +3829,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":31}],10:[function(require,module,exports){
+},{"ms":34}],13:[function(require,module,exports){
 module.exports = (() => {
   if (typeof self !== "undefined") {
     return self;
@@ -2933,7 +3840,7 @@ module.exports = (() => {
   }
 })();
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 const Socket = require("./socket");
 
 module.exports = (uri, opts) => new Socket(uri, opts);
@@ -2949,7 +3856,7 @@ module.exports.Transport = require("./transport");
 module.exports.transports = require("./transports/index");
 module.exports.parser = require("engine.io-parser");
 
-},{"./socket":12,"./transport":13,"./transports/index":14,"engine.io-parser":28}],12:[function(require,module,exports){
+},{"./socket":15,"./transport":16,"./transports/index":17,"engine.io-parser":31}],15:[function(require,module,exports){
 const transports = require("./transports/index");
 const Emitter = require("component-emitter");
 const debug = require("debug")("engine.io-client:socket");
@@ -3617,7 +4524,7 @@ function clone(obj) {
 
 module.exports = Socket;
 
-},{"./transports/index":14,"component-emitter":7,"debug":22,"engine.io-parser":28,"parseqs":32,"parseuri":33}],13:[function(require,module,exports){
+},{"./transports/index":17,"component-emitter":7,"debug":25,"engine.io-parser":31,"parseqs":35,"parseuri":36}],16:[function(require,module,exports){
 const parser = require("engine.io-parser");
 const Emitter = require("component-emitter");
 
@@ -3736,7 +4643,7 @@ class Transport extends Emitter {
 
 module.exports = Transport;
 
-},{"component-emitter":7,"engine.io-parser":28}],14:[function(require,module,exports){
+},{"component-emitter":7,"engine.io-parser":31}],17:[function(require,module,exports){
 const XMLHttpRequest = require("xmlhttprequest-ssl");
 const XHR = require("./polling-xhr");
 const JSONP = require("./polling-jsonp");
@@ -3783,7 +4690,7 @@ function polling(opts) {
   }
 }
 
-},{"./polling-jsonp":15,"./polling-xhr":16,"./websocket":19,"xmlhttprequest-ssl":21}],15:[function(require,module,exports){
+},{"./polling-jsonp":18,"./polling-xhr":19,"./websocket":22,"xmlhttprequest-ssl":24}],18:[function(require,module,exports){
 const Polling = require("./polling");
 const globalThis = require("../globalThis");
 
@@ -4000,7 +4907,7 @@ class JSONPPolling extends Polling {
 
 module.exports = JSONPPolling;
 
-},{"../globalThis":10,"./polling":17}],16:[function(require,module,exports){
+},{"../globalThis":13,"./polling":20}],19:[function(require,module,exports){
 /* global attachEvent */
 
 const XMLHttpRequest = require("xmlhttprequest-ssl");
@@ -4338,7 +5245,7 @@ function unloadHandler() {
 module.exports = XHR;
 module.exports.Request = Request;
 
-},{"../globalThis":10,"../util":20,"./polling":17,"component-emitter":7,"debug":22,"xmlhttprequest-ssl":21}],17:[function(require,module,exports){
+},{"../globalThis":13,"../util":23,"./polling":20,"component-emitter":7,"debug":25,"xmlhttprequest-ssl":24}],20:[function(require,module,exports){
 const Transport = require("../transport");
 const parseqs = require("parseqs");
 const parser = require("engine.io-parser");
@@ -4550,7 +5457,7 @@ class Polling extends Transport {
 
 module.exports = Polling;
 
-},{"../transport":13,"debug":22,"engine.io-parser":28,"parseqs":32,"yeast":49}],18:[function(require,module,exports){
+},{"../transport":16,"debug":25,"engine.io-parser":31,"parseqs":35,"yeast":52}],21:[function(require,module,exports){
 const globalThis = require("../globalThis");
 
 module.exports = {
@@ -4559,7 +5466,7 @@ module.exports = {
   defaultBinaryType: "arraybuffer"
 };
 
-},{"../globalThis":10}],19:[function(require,module,exports){
+},{"../globalThis":13}],22:[function(require,module,exports){
 (function (Buffer){(function (){
 const Transport = require("../transport");
 const parser = require("engine.io-parser");
@@ -4831,7 +5738,7 @@ class WS extends Transport {
 module.exports = WS;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../transport":13,"../util":20,"./websocket-constructor":18,"buffer":2,"debug":22,"engine.io-parser":28,"parseqs":32,"yeast":49}],20:[function(require,module,exports){
+},{"../transport":16,"../util":23,"./websocket-constructor":21,"buffer":2,"debug":25,"engine.io-parser":31,"parseqs":35,"yeast":52}],23:[function(require,module,exports){
 module.exports.pick = (obj, ...attr) => {
   return attr.reduce((acc, k) => {
     if (obj.hasOwnProperty(k)) {
@@ -4841,7 +5748,7 @@ module.exports.pick = (obj, ...attr) => {
   }, {});
 };
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 
 const hasCORS = require("has-cors");
@@ -4883,7 +5790,7 @@ module.exports = function(opts) {
   }
 };
 
-},{"./globalThis":10,"has-cors":29}],22:[function(require,module,exports){
+},{"./globalThis":13,"has-cors":32}],25:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -5156,7 +6063,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":23,"_process":4}],23:[function(require,module,exports){
+},{"./common":26,"_process":4}],26:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -5419,7 +6326,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":24}],24:[function(require,module,exports){
+},{"ms":27}],27:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -5583,7 +6490,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 const PACKET_TYPES = Object.create(null); // no Map = no polyfill
 PACKET_TYPES["open"] = "0";
 PACKET_TYPES["close"] = "1";
@@ -5606,7 +6513,7 @@ module.exports = {
   ERROR_PACKET
 };
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 const { PACKET_TYPES_REVERSE, ERROR_PACKET } = require("./commons");
 
 const withNativeArrayBuffer = typeof ArrayBuffer === "function";
@@ -5665,7 +6572,7 @@ const mapBinary = (data, binaryType) => {
 
 module.exports = decodePacket;
 
-},{"./commons":25,"base64-arraybuffer":6}],27:[function(require,module,exports){
+},{"./commons":28,"base64-arraybuffer":6}],30:[function(require,module,exports){
 const { PACKET_TYPES } = require("./commons");
 
 const withNativeBlob =
@@ -5713,7 +6620,7 @@ const encodeBlobAsBase64 = (data, callback) => {
 
 module.exports = encodePacket;
 
-},{"./commons":25}],28:[function(require,module,exports){
+},{"./commons":28}],31:[function(require,module,exports){
 const encodePacket = require("./encodePacket");
 const decodePacket = require("./decodePacket");
 
@@ -5757,7 +6664,7 @@ module.exports = {
   decodePayload
 };
 
-},{"./decodePacket":26,"./encodePacket":27}],29:[function(require,module,exports){
+},{"./decodePacket":29,"./encodePacket":30}],32:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -5776,7 +6683,7 @@ try {
   module.exports = false;
 }
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 
 module.exports = function load (src, opts, cb) {
   var head = document.head || document.getElementsByTagName('head')[0]
@@ -5843,7 +6750,7 @@ function ieOnEnd (script, cb) {
   }
 }
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -5997,7 +6904,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],32:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -6036,7 +6943,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -6106,7 +7013,7 @@ function queryKey(uri, query) {
     return data;
 }
 
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var Sister;
@@ -6169,7 +7076,7 @@ Sister = function () {
 
 module.exports = Sister;
 
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Socket = exports.io = exports.Manager = exports.protocol = void 0;
@@ -6241,7 +7148,7 @@ exports.connect = lookup;
 var manager_2 = require("./manager");
 Object.defineProperty(exports, "Manager", { enumerable: true, get: function () { return manager_2.Manager; } });
 
-},{"./manager":36,"./socket":38,"./url":39,"debug":40,"socket.io-parser":44}],36:[function(require,module,exports){
+},{"./manager":39,"./socket":41,"./url":42,"debug":43,"socket.io-parser":47}],39:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Manager = void 0;
@@ -6612,7 +7519,7 @@ class Manager extends Emitter {
 }
 exports.Manager = Manager;
 
-},{"./on":37,"./socket":38,"backo2":5,"component-emitter":7,"debug":40,"engine.io-client":11,"socket.io-parser":44}],37:[function(require,module,exports){
+},{"./on":40,"./socket":41,"backo2":5,"component-emitter":7,"debug":43,"engine.io-client":14,"socket.io-parser":47}],40:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.on = void 0;
@@ -6624,7 +7531,7 @@ function on(obj, ev, fn) {
 }
 exports.on = on;
 
-},{}],38:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Socket = void 0;
@@ -7087,7 +7994,7 @@ class Socket extends Emitter {
 }
 exports.Socket = Socket;
 
-},{"./on":37,"component-emitter":7,"debug":40,"socket.io-parser":44}],39:[function(require,module,exports){
+},{"./on":40,"component-emitter":7,"debug":43,"socket.io-parser":47}],42:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.url = void 0;
@@ -7155,13 +8062,13 @@ function url(uri, path = "", loc) {
 }
 exports.url = url;
 
-},{"debug":40,"parseuri":33}],40:[function(require,module,exports){
-arguments[4][22][0].apply(exports,arguments)
-},{"./common":41,"_process":4,"dup":22}],41:[function(require,module,exports){
-arguments[4][23][0].apply(exports,arguments)
-},{"dup":23,"ms":42}],42:[function(require,module,exports){
-arguments[4][24][0].apply(exports,arguments)
-},{"dup":24}],43:[function(require,module,exports){
+},{"debug":43,"parseuri":36}],43:[function(require,module,exports){
+arguments[4][25][0].apply(exports,arguments)
+},{"./common":44,"_process":4,"dup":25}],44:[function(require,module,exports){
+arguments[4][26][0].apply(exports,arguments)
+},{"dup":26,"ms":45}],45:[function(require,module,exports){
+arguments[4][27][0].apply(exports,arguments)
+},{"dup":27}],46:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconstructPacket = exports.deconstructPacket = void 0;
@@ -7243,7 +8150,7 @@ function _reconstructPacket(data, buffers) {
     return data;
 }
 
-},{"./is-binary":45}],44:[function(require,module,exports){
+},{"./is-binary":48}],47:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Decoder = exports.Encoder = exports.PacketType = exports.protocol = void 0;
@@ -7525,7 +8432,7 @@ class BinaryReconstructor {
     }
 }
 
-},{"./binary":43,"./is-binary":45,"component-emitter":7,"debug":46}],45:[function(require,module,exports){
+},{"./binary":46,"./is-binary":48,"component-emitter":7,"debug":49}],48:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBinary = exports.isBinary = void 0;
@@ -7582,13 +8489,13 @@ function hasBinary(obj, toJSON) {
 }
 exports.hasBinary = hasBinary;
 
-},{}],46:[function(require,module,exports){
-arguments[4][22][0].apply(exports,arguments)
-},{"./common":47,"_process":4,"dup":22}],47:[function(require,module,exports){
-arguments[4][23][0].apply(exports,arguments)
-},{"dup":23,"ms":48}],48:[function(require,module,exports){
-arguments[4][24][0].apply(exports,arguments)
-},{"dup":24}],49:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
+arguments[4][25][0].apply(exports,arguments)
+},{"./common":50,"_process":4,"dup":25}],50:[function(require,module,exports){
+arguments[4][26][0].apply(exports,arguments)
+},{"dup":26,"ms":51}],51:[function(require,module,exports){
+arguments[4][27][0].apply(exports,arguments)
+},{"dup":27}],52:[function(require,module,exports){
 'use strict';
 
 var alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'.split('')
@@ -7658,7 +8565,7 @@ yeast.encode = encode;
 yeast.decode = decode;
 module.exports = yeast;
 
-},{}],50:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7690,7 +8597,7 @@ exports.default = {
   }
 };
 module.exports = exports['default'];
-},{"./constants/PlayerStates":52}],51:[function(require,module,exports){
+},{"./constants/PlayerStates":55}],54:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7889,7 +8796,7 @@ YouTubePlayer.promisifyPlayer = function (playerAPIReady) {
 
 exports.default = YouTubePlayer;
 module.exports = exports['default'];
-},{"./FunctionStateMap":50,"./eventNames":53,"./functionNames":54,"debug":8}],52:[function(require,module,exports){
+},{"./FunctionStateMap":53,"./eventNames":56,"./functionNames":57,"debug":11}],55:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7904,7 +8811,7 @@ exports.default = {
   VIDEO_CUED: 5
 };
 module.exports = exports["default"];
-},{}],53:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7919,7 +8826,7 @@ Object.defineProperty(exports, "__esModule", {
  */
 exports.default = ['ready', 'stateChange', 'playbackQualityChange', 'playbackRateChange', 'error', 'apiChange', 'volumeChange'];
 module.exports = exports['default'];
-},{}],54:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7932,7 +8839,7 @@ Object.defineProperty(exports, "__esModule", {
  */
 exports.default = ['cueVideoById', 'loadVideoById', 'cueVideoByUrl', 'loadVideoByUrl', 'playVideo', 'pauseVideo', 'stopVideo', 'getVideoLoadedFraction', 'cuePlaylist', 'loadPlaylist', 'nextVideo', 'previousVideo', 'playVideoAt', 'setShuffle', 'setLoop', 'getPlaylist', 'getPlaylistIndex', 'setOption', 'mute', 'unMute', 'isMuted', 'setVolume', 'getVolume', 'seekTo', 'getPlayerState', 'getPlaybackRate', 'setPlaybackRate', 'getAvailablePlaybackRates', 'getPlaybackQuality', 'setPlaybackQuality', 'getAvailableQualityLevels', 'getCurrentTime', 'getDuration', 'removeEventListener', 'getVideoUrl', 'getVideoEmbedCode', 'getOptions', 'getOption', 'addEventListener', 'destroy', 'setSize', 'getIframe'];
 module.exports = exports['default'];
-},{}],55:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8026,7 +8933,7 @@ exports.default = function (maybeElementId) {
 };
 
 module.exports = exports['default'];
-},{"./YouTubePlayer":51,"./loadYouTubeIframeApi":56,"sister":34}],56:[function(require,module,exports){
+},{"./YouTubePlayer":54,"./loadYouTubeIframeApi":59,"sister":37}],59:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8076,11 +8983,18 @@ exports.default = function (emitter) {
 };
 
 module.exports = exports['default'];
-},{"load-script":30}],57:[function(require,module,exports){
+},{"load-script":33}],60:[function(require,module,exports){
+const { ResizeSensor } = require("css-element-queries");
 
 class VideoManager
 {
+    queue = [];
+    queueElem = document.getElementById("playlist");
     currentVideo;
+    resizeSensor = new ResizeSensor(document.querySelector("section#player"), () => {
+        if(this.currentVideo != null)
+            this.currentVideo.resize();
+    });
     seekTo(time)
     {
         this.currentVideo.seekTo(time);
@@ -8095,23 +9009,39 @@ class VideoManager
     }
     playNew(video)
     {
-        // this.currentVideo.destroy();
         this.currentVideo = video;
     }
     getCurrentTime()
     {
-        return this.currentVideo.getCurrentTime();
+        if(this.currentVideo != null)
+            return this.currentVideo.getCurrentTime();
+    }
+    enqueue(videos)
+    {
+        videos.forEach(video => {
+            const queueItem = document.createElement("div");
+            queueItem.className = "playlist-video";
+            const durationLabel = document.createElement("h1");
+            durationLabel.textContent = video.duration;
+            const titleLabel = document.createElement("h1");
+            titleLabel.textContent = video.title;
+            this.queueElem.appendChild(queueItem);
+            queueItem.appendChild(durationLabel);
+            queueItem.appendChild(titleLabel);
+            this.queue.push(queueItem);
+        })
     }
 }
 module.exports = VideoManager;
-},{}],58:[function(require,module,exports){
+},{"css-element-queries":8}],61:[function(require,module,exports){
 const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
-const leaderButton = document.querySelector("#leader-btn")
+const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
-const YouTube = require("./players/YouTube.js")
+const YouTube = require("./players/YouTube.js");
+const ElementQueries = require("css-element-queries/src/ResizeSensor");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -8139,36 +9069,43 @@ addVideoInput.addEventListener("keyup", (event) => {
 var videoManager = new VideoManager();
 var syncThreshold = 1000;
 socket.on("play", (data) => {
-    switch(data.video.type)
-    {
+    switch (data.video.type) {
         case "YouTube":
-            console.log(data.video.id)
+            if(videoManager.currentVideo != null)
+                videoManager.currentVideo.destroy();
+            console.log(data.video.id);
             videoManager.playNew(new YouTube(data.video.id, socket));
             break;
     }
 });
 socket.on("pause", () => {
     videoManager.pause();
-})
+});
 socket.on("unpause", () => {
     videoManager.unpause();
-})
+});
 socket.on("sync", (data) => {
     videoManager.getCurrentTime().then((currentTime) => {
-        if(Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold)
-        {
+        if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
             videoManager.seekTo(data.currentTime);
-            console.log("%cSYNCED!", 'color: red');
+            console.log("%cSYNCED!", "color: red");
         }
-    })
-})
+    });
+});
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";
-})
+});
 socket.on("unleadered", () => {
     leaderButton.style.backgroundColor = "";
+});
+socket.on("enqueue", (data) => {
+    videoManager.enqueue([data.video]);
+});
+socket.on("enqueueAll", (data) => {
+    videoManager.enqueue(data.videos);
 })
-},{"./VideoManager.js":57,"./players/YouTube.js":59,"socket.io-client":35}],59:[function(require,module,exports){
+
+},{"./VideoManager.js":60,"./players/YouTube.js":62,"css-element-queries/src/ResizeSensor":10,"socket.io-client":38}],62:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
@@ -8217,7 +9154,9 @@ class YouTube {
         this.syncer = setInterval(() => {
             if(this.state == 1)
             {
-                this.socket.emit("sync");
+                this.player.getCurrentTime().then(time => {
+                    this.socket.emit("sync", {currentTime: time});
+                })
             }
         }, 100)
     }
@@ -8236,8 +9175,17 @@ class YouTube {
     {
         return this.player.getCurrentTime();
     }
+    resize()
+    {
+        this.player.setSize(this.playerElem.clientWidth, this.playerElem.clientHeight);
+    }
+    destroy()
+    {
+        console.log("DESTROY")
+        this.player.destroy();
+    }
 }
 
 module.exports = YouTube;
 
-},{"youtube-player":55}]},{},[58]);
+},{"youtube-player":58}]},{},[61]);

@@ -46,7 +46,9 @@ class YouTube {
         this.syncer = setInterval(() => {
             if(this.state == 1)
             {
-                this.socket.emit("sync");
+                this.player.getCurrentTime().then(time => {
+                    this.socket.emit("sync", {currentTime: time});
+                })
             }
         }, 100)
     }
@@ -64,6 +66,15 @@ class YouTube {
     getCurrentTime()
     {
         return this.player.getCurrentTime();
+    }
+    resize()
+    {
+        this.player.setSize(this.playerElem.clientWidth, this.playerElem.clientHeight);
+    }
+    destroy()
+    {
+        console.log("DESTROY")
+        this.player.destroy();
     }
 }
 
