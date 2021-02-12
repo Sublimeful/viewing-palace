@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server/server.js", 
+    "start": "node src/server/server.js",
     "build": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
     "nodemon": "nodemon src/server/server.js",
     "watchify": "watchify src/client/client.js -o public/client.js -v"
@@ -23,7 +23,6 @@
     "crypto-js": "^4.0.0",
     "css-element-queries": "^1.2.3",
     "express": "^4.17.1",
-    "gulp": "^4.0.2",
     "http": "0.0.1-security",
     "node-fetch": "^2.6.1",
     "nodemon": "^2.0.7",
