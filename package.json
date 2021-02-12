@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "web": "node src/server/server.js",
-    "start": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
+    "start": "node src/server/server.js", 
+    "build": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
     "nodemon": "nodemon src/server/server.js",
     "watchify": "watchify src/client/client.js -o public/client.js -v"
   },
