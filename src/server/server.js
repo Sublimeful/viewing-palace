@@ -15,9 +15,16 @@ var videoManager = new VideoManager(io);
 io.on("connection", (socket) => {
     socket.isSignedIn = false;
     videoManager.loadVideo(socket);
-    socket.on("addVideo", (data) => {
-        videoManager.enqueue(data.input, socket);
+    socket.on("enqueue", (data) => {
+        videoManager.parseInput(data.input, socket);
     });
+    socket.on("dequeue", (data) => {
+        if (socket.isLeader)
+        {
+            videoManager.dequeue(data.video);
+            io.emit("dequeue", {video: data.video});
+        }
+    })
     socket.on("pause", () => {
         if (socket.isLeader) {
             videoManager.pause(socket);

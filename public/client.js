@@ -8985,16 +8985,37 @@ exports.default = function (emitter) {
 module.exports = exports['default'];
 },{"load-script":33}],60:[function(require,module,exports){
 const { ResizeSensor } = require("css-element-queries");
+const YouTube = require("./players/YouTube.js");
 
 class VideoManager
 {
     queue = [];
+    elemQueue = [];
     queueElem = document.getElementById("playlist");
     currentVideo;
+    socket;
     resizeSensor = new ResizeSensor(document.querySelector("section#player"), () => {
         if(this.currentVideo != null)
             this.currentVideo.resize();
     });
+    constructor(socket)
+    {
+        this.socket = socket;
+    }
+    /**
+     * uses video equals method to get index of video
+     * 
+     * returns -1 if not found at all (for some reason)
+     */
+    findIndex(video)
+    {
+        for(var i = 0; i < this.queue.length; ++i)
+        {
+            if(YouTube.isEqual(video, this.queue[i]))
+                return i;
+        }
+        return -1;
+    }
     seekTo(time)
     {
         this.currentVideo.seekTo(time);
@@ -9016,6 +9037,12 @@ class VideoManager
         if(this.currentVideo != null)
             return this.currentVideo.getCurrentTime();
     }
+    dequeue(video)
+    {
+        const index = this.findIndex(video);
+        this.queue.splice(index, 1); 
+        this.elemQueue.splice(index, 1)[0].remove();
+    }
     enqueue(videos)
     {
         videos.forEach(video => {
@@ -9025,15 +9052,21 @@ class VideoManager
             durationLabel.textContent = video.duration;
             const titleLabel = document.createElement("h1");
             titleLabel.textContent = video.title;
+            const delButton = document.createElement("button");
             this.queueElem.appendChild(queueItem);
             queueItem.appendChild(durationLabel);
             queueItem.appendChild(titleLabel);
-            this.queue.push(queueItem);
+            queueItem.appendChild(delButton);
+            this.elemQueue.push(queueItem);
+            this.queue.push(video);
+            delButton.addEventListener("click", () => {
+                this.socket.emit("dequeue", {video: video});
+            })
         })
     }
 }
 module.exports = VideoManager;
-},{"css-element-queries":8}],61:[function(require,module,exports){
+},{"./players/YouTube.js":62,"css-element-queries":8}],61:[function(require,module,exports){
 const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
@@ -9060,12 +9093,12 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("addVideo", { input: addVideoInput.value });
+        socket.emit("enqueue", { input: addVideoInput.value });
         addVideoInput.value = "";
     }
 });
 
-var videoManager = new VideoManager();
+var videoManager = new VideoManager(socket);
 var syncThreshold = 1000;
 socket.on("play", (data) => {
     if(videoManager.currentVideo != null)
@@ -9086,7 +9119,6 @@ socket.on("sync", (data) => {
     videoManager.getCurrentTime().then((currentTime) => {
         if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
             videoManager.seekTo(data.currentTime);
-            console.log("%cSYNCED!", "color: red");
         }
     });
 });
@@ -9102,7 +9134,10 @@ socket.on("enqueue", (data) => {
 socket.on("enqueueAll", (data) => {
     videoManager.enqueue(data.videos);
 })
+socket.on("dequeue", (data) => {
+    videoManager.dequeue(data.video);
 
+})
 },{"./VideoManager.js":60,"./players/YouTube.js":62,"socket.io-client":38}],62:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
@@ -9181,6 +9216,14 @@ class YouTube {
     {
         clearInterval(this.syncer);
         this.player.destroy();
+    }
+    static isEqual(video, other) {
+        return (
+            video.type === other.type &&
+            video.id === other.id &&
+            video.title === other.title &&
+            video.duration === other.duration
+        );
     }
 }
 

@@ -24,12 +24,12 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("addVideo", { input: addVideoInput.value });
+        socket.emit("enqueue", { input: addVideoInput.value });
         addVideoInput.value = "";
     }
 });
 
-var videoManager = new VideoManager();
+var videoManager = new VideoManager(socket);
 var syncThreshold = 1000;
 socket.on("play", (data) => {
     if(videoManager.currentVideo != null)
@@ -50,7 +50,6 @@ socket.on("sync", (data) => {
     videoManager.getCurrentTime().then((currentTime) => {
         if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
             videoManager.seekTo(data.currentTime);
-            console.log("%cSYNCED!", "color: red");
         }
     });
 });
@@ -65,4 +64,8 @@ socket.on("enqueue", (data) => {
 });
 socket.on("enqueueAll", (data) => {
     videoManager.enqueue(data.videos);
+})
+socket.on("dequeue", (data) => {
+    videoManager.dequeue(data.video);
+
 })

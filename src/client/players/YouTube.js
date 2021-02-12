@@ -76,6 +76,14 @@ class YouTube {
         clearInterval(this.syncer);
         this.player.destroy();
     }
+    static isEqual(video, other) {
+        return (
+            video.type === other.type &&
+            video.id === other.id &&
+            video.title === other.title &&
+            video.duration === other.duration
+        );
+    }
 }
 
 module.exports = YouTube;

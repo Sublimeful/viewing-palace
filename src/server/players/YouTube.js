@@ -6,28 +6,26 @@ class YouTube {
         this.title = title;
         this.duration = duration;
     }
-    equals(other) {
+    static isEqual(video, other) {
         return (
-            this.type === other.type &&
-            this.id === other.id &&
-            this.title === other.title &&
-            this.duration === other.duration
+            video.type === other.type &&
+            video.id === other.id &&
+            video.title === other.title &&
+            video.duration === other.duration
         );
     }
-    static getId(url) {
-        if (url.includes("youtube.com/watch?v=")) {
-            var i = url.indexOf("youtube.com/watch?v=");
-            return url.substring(i + 20, i + 20 + 11);
-        } else if (url.includes("youtube.com/")) {
-            var i = url.indexOf("youtube.com/");
-            return url.substring(i + 12, i + 12 + 11);
-        } else if (url.includes("youtu.be/")) {
-            var i = url.indexOf("youtu.be/");
-            return url.substring(i + 9, i + 9 + 11);
+    static getId(url, type) {
+        const matchVideo = /youtube\.com.*v=([A-z0-9_-]+)/;
+        const matchPlaylist = /youtube\.com.*list=([A-z0-9_-]+)/;
+        switch (type) {
+            case "Video":
+                return url.match(matchVideo)[1];
+            case "Playlist":
+                return url.match(matchPlaylist)[1];
         }
     }
-    static requestData(url) {
-        const id = YouTube.getId(url);
+    static requestVideoData(url, id = null) {
+        if (id == null) id = YouTube.getId(url, "Video");
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${apiKey}`;
         return new Promise(function (resolve, reject) {
@@ -61,9 +59,32 @@ class YouTube {
                         hours * 60 * 60 * 1000;
                     resolve(new YouTube(id, item.snippet.title, duration));
                 })
-                .catch((err) => {
-                    reject(err);
-                });
+                .catch((err) => reject(err));
+        });
+    }
+    static requestPlaylistData(url) {
+        const id = YouTube.getId(url, "Playlist");
+        const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
+        const fetchUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&fields=nextPageToken,items(snippet/resourceId/videoId)&playlistId=${id}&key=${apiKey}`;
+        return new Promise((resolve, reject) => {
+            var res = [];
+            fetch(fetchUrl)
+                .then((res) => res.json())
+                .then((json) => {
+                    const resolver = async() => {
+                        const pusher = async() => {
+                            for (var i = 0; i < json.items.length; ++i) {
+                                const item = json.items[i];
+                                const id = item.snippet.resourceId.videoId;
+                                res.push(await this.requestVideoData(null, id));
+                            }
+                        }
+                        await pusher();
+                        resolve(res);
+                    }
+                    resolver();
+                })
+                .catch((err) => reject(err));
         });
     }
 }
