@@ -8,7 +8,7 @@ const app = express();
 
 var port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
-    console.log("🔥 server is listening on port " + port_number + "!");
+    console.log("🔥 server is listening on port " + port + "!");
 });
 const io = new Server(server);
 
