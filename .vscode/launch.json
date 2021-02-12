@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "command": "yarn run build",
+            "command": "yarn run start",
             "name": "build && start",
             "request": "launch",
             "type": "node-terminal"
