@@ -7,6 +7,14 @@ class VideoManager {
         this.currentPlaying = null;
         this.timer = new Timer();
     }
+    isEqual(video, other) {
+        return (
+            video.type === other.type &&
+            video.id === other.id &&
+            video.title === other.title &&
+            video.duration === other.duration
+        );
+    }
     /**
      * uses video equals method to get index of video
      *
@@ -14,7 +22,7 @@ class VideoManager {
      */
     findIndex(video) {
         for (var i = 0; i < this.queue.length; ++i) {
-            if (YouTube.isEqual(video, this.queue[i])) return i;
+            if (this.isEqual(video, this.queue[i])) return i;
         }
         return -1;
     }
@@ -57,7 +65,7 @@ class VideoManager {
     //removes video
     dequeue(video) {
         this.queue.splice(this.findIndex(video), 1);
-        if (YouTube.isEqual(video, this.currentPlaying)) {
+        if (this.isEqual(video, this.currentPlaying)) {
             const videoIndex = this.findIndex(this.currentPlaying);
             this.currentPlaying = null;
             if (videoIndex + 1 < this.queue.length) {
@@ -68,7 +76,7 @@ class VideoManager {
     enqueue(video) {
         var duplicateVid = false;
         this.queue.forEach((otherVid) => {
-            if (YouTube.isEqual(video, otherVid)) {
+            if (this.isEqual(video, otherVid)) {
                 duplicateVid = true;
                 return;
             }
@@ -101,11 +109,13 @@ class VideoManager {
                     videos.forEach(video => {
                         this.enqueue(video);
                     });
-                    this.io.emit("enqueueAll", {videos: videos});
                 })
                 .catch((err) => {
                     console.error(err);
                 });
+        } else { //is RAW
+
+
         }
     }
 }

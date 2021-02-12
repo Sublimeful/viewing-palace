@@ -16,6 +16,14 @@ class VideoManager
     {
         this.socket = socket;
     }
+    isEqual(video, other) {
+        return (
+            video.type === other.type &&
+            video.id === other.id &&
+            video.title === other.title &&
+            video.duration === other.duration
+        );
+    }
     /**
      * uses video equals method to get index of video
      * 
@@ -25,7 +33,7 @@ class VideoManager
     {
         for(var i = 0; i < this.queue.length; ++i)
         {
-            if(YouTube.isEqual(video, this.queue[i]))
+            if(this.isEqual(video, this.queue[i]))
                 return i;
         }
         return -1;

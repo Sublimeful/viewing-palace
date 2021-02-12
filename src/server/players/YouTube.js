@@ -6,14 +6,6 @@ class YouTube {
         this.title = title;
         this.duration = duration;
     }
-    static isEqual(video, other) {
-        return (
-            video.type === other.type &&
-            video.id === other.id &&
-            video.title === other.title &&
-            video.duration === other.duration
-        );
-    }
     static getId(url, type) {
         const matchVideo = /youtube\.com.*v=([A-z0-9_-]+)/;
         const matchPlaylist = /youtube\.com.*list=([A-z0-9_-]+)/;
