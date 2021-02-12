@@ -9106,7 +9106,7 @@ module.exports = VideoManager;
 
 },{"./players/Raw.js":62,"./players/YouTube.js":63,"css-element-queries":8}],61:[function(require,module,exports){
 const connect = require("socket.io-client");
-const socket = connect("http://localhost:8080/");
+const socket = connect();
 const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
