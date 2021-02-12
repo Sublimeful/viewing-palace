@@ -17,12 +17,20 @@ class VideoManager
         this.socket = socket;
     }
     isEqual(video, other) {
-        return (
-            video.type === other.type &&
-            video.id === other.id &&
-            video.title === other.title &&
-            video.duration === other.duration
-        );
+        if(video == null || other == null) return false;
+        if (video.type == "YouTube" && other.type == "YouTube") {
+            return (
+                video.duration == other.duration &&
+                video.id == other.id &&
+                video.title == other.title
+            );
+        } else if (video.type == "Raw" && other.type == "Raw") {
+            return (
+                video.duration == other.duration &&
+                video.contentType == other.contentType &&
+                video.url == other.url
+            );
+        } else return false;
     }
     /**
      * uses video equals method to get index of video
@@ -52,7 +60,16 @@ class VideoManager
     }
     playNew(video)
     {
-        this.currentVideo = video;
+        if(this.currentVideo != null)
+            this.currentVideo.destroy();
+        if(video.type == "YouTube")
+        {
+            this.currentVideo = new YouTube(video.id, socket);
+        }
+        else // is RAW
+        {
+            this.currentVideo = new Raw(video, socket);
+        }
     }
     getCurrentTime()
     {

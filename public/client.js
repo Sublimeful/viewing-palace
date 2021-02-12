@@ -9003,12 +9003,20 @@ class VideoManager
         this.socket = socket;
     }
     isEqual(video, other) {
-        return (
-            video.type === other.type &&
-            video.id === other.id &&
-            video.title === other.title &&
-            video.duration === other.duration
-        );
+        if(video == null || other == null) return false;
+        if (video.type == "YouTube" && other.type == "YouTube") {
+            return (
+                video.duration == other.duration &&
+                video.id == other.id &&
+                video.title == other.title
+            );
+        } else if (video.type == "Raw" && other.type == "Raw") {
+            return (
+                video.duration == other.duration &&
+                video.contentType == other.contentType &&
+                video.url == other.url
+            );
+        } else return false;
     }
     /**
      * uses video equals method to get index of video
@@ -9038,6 +9046,16 @@ class VideoManager
     }
     playNew(video)
     {
+        if(videoManager.currentVideo != null)
+            videoManager.currentVideo.destroy();
+        if(video.type == "YouTube")
+        {
+            videoManager.playNew(new YouTube(video.id, socket));
+        }
+        else // is RAW
+        {
+            videoManager.playNew(new Raw(video, socket))
+        }
         this.currentVideo = video;
     }
     getCurrentTime()
@@ -9074,7 +9092,7 @@ class VideoManager
     }
 }
 module.exports = VideoManager;
-},{"./players/YouTube.js":62,"css-element-queries":8}],61:[function(require,module,exports){
+},{"./players/YouTube.js":63,"css-element-queries":8}],61:[function(require,module,exports){
 const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
@@ -9082,6 +9100,7 @@ const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
 const YouTube = require("./players/YouTube.js");
+const Raw = require("./players/Raw.js");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -9109,13 +9128,7 @@ addVideoInput.addEventListener("keyup", (event) => {
 var videoManager = new VideoManager(socket);
 var syncThreshold = 1000;
 socket.on("play", (data) => {
-    if(videoManager.currentVideo != null)
-        videoManager.currentVideo.destroy();
-    switch (data.video.type) {
-        case "YouTube":
-            videoManager.playNew(new YouTube(data.video.id, socket));
-            break;
-    }
+    videoManager.playNew(data.video);
 });
 socket.on("pause", () => {
     videoManager.pause();
@@ -9144,9 +9157,23 @@ socket.on("enqueueAll", (data) => {
 })
 socket.on("dequeue", (data) => {
     videoManager.dequeue(data.video);
-
 })
-},{"./VideoManager.js":60,"./players/YouTube.js":62,"socket.io-client":38}],62:[function(require,module,exports){
+},{"./VideoManager.js":60,"./players/Raw.js":62,"./players/YouTube.js":63,"socket.io-client":38}],62:[function(require,module,exports){
+class Raw
+{
+    constructor(video, socket)
+    {
+        fetch(video.url).then((res) => {
+            console.log(res.headers);
+        })
+    }
+    destroy()
+    {
+
+    }
+}
+module.exports = Raw;
+},{}],63:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {

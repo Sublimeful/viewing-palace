@@ -24,10 +24,7 @@ class YouTube {
             fetch(fetchUrl)
                 .then((res) => res.json())
                 .then((json) => {
-                    if (json.items[0] == null) {
-                        res = null;
-                        return;
-                    }
+                    if (json.items[0] == null) return;
                     const item = json.items[0];
                     var matchHours = /([0-9]+)H/;
                     var matchMinutes = /([0-9]+)M/;
@@ -63,17 +60,18 @@ class YouTube {
             fetch(fetchUrl)
                 .then((res) => res.json())
                 .then((json) => {
-                    const resolver = async() => {
-                        const pusher = async() => {
+                    if (json.items == null) return;
+                    const resolver = async () => {
+                        const pusher = async () => {
                             for (var i = 0; i < json.items.length; ++i) {
                                 const item = json.items[i];
                                 const id = item.snippet.resourceId.videoId;
                                 res.push(await this.requestVideoData(null, id));
                             }
-                        }
+                        };
                         await pusher();
                         resolve(res);
-                    }
+                    };
                     resolver();
                 })
                 .catch((err) => reject(err));

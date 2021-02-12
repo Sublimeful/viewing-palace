@@ -5,6 +5,7 @@ const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
 const YouTube = require("./players/YouTube.js");
+const Raw = require("./players/Raw.js");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -32,13 +33,7 @@ addVideoInput.addEventListener("keyup", (event) => {
 var videoManager = new VideoManager(socket);
 var syncThreshold = 1000;
 socket.on("play", (data) => {
-    if(videoManager.currentVideo != null)
-        videoManager.currentVideo.destroy();
-    switch (data.video.type) {
-        case "YouTube":
-            videoManager.playNew(new YouTube(data.video.id, socket));
-            break;
-    }
+    videoManager.playNew(data.video);
 });
 socket.on("pause", () => {
     videoManager.pause();
@@ -67,5 +62,4 @@ socket.on("enqueueAll", (data) => {
 })
 socket.on("dequeue", (data) => {
     videoManager.dequeue(data.video);
-
 })

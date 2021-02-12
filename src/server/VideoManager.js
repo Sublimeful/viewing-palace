@@ -1,4 +1,5 @@
 import YouTube from "./players/YouTube.js";
+import Raw from "./players/Raw.js";
 import Timer from "./Timer.js";
 class VideoManager {
     constructor(io) {
@@ -8,12 +9,20 @@ class VideoManager {
         this.timer = new Timer();
     }
     isEqual(video, other) {
-        return (
-            video.type === other.type &&
-            video.id === other.id &&
-            video.title === other.title &&
-            video.duration === other.duration
-        );
+        if(video == null || other == null) return false;
+        if (video.type == "YouTube" && other.type == "YouTube") {
+            return (
+                video.duration == other.duration &&
+                video.id == other.id &&
+                video.title == other.title
+            );
+        } else if (video.type == "Raw" && other.type == "Raw") {
+            return (
+                video.duration == other.duration &&
+                video.contentType == other.contentType &&
+                video.url == other.url
+            );
+        } else return false;
     }
     /**
      * uses video equals method to get index of video
@@ -99,23 +108,24 @@ class VideoManager {
                 .then((video) => {
                     this.enqueue(video);
                 })
-                .catch((err) => {
-                    console.error(err);
-                });
+                .catch((err) => console.error(err));
         } else if (matchYouTubePlaylist.test(userInput)) {
             const request = YouTube.requestPlaylistData(userInput);
             request
                 .then((videos) => {
-                    videos.forEach(video => {
+                    videos.forEach((video) => {
                         this.enqueue(video);
                     });
                 })
-                .catch((err) => {
-                    console.error(err);
-                });
-        } else { //is RAW
-
-
+                .catch((err) => console.error(err));
+        } else {
+            //is RAW
+            const request = Raw.requestVideoData(userInput);
+            request
+                .then((video) => {
+                    this.enqueue(video);
+                })
+                .catch((err) => console.error(err));
         }
     }
 }
