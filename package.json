@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server/server.js",
     "build": "node src/server/server.js",
-    "build______": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
+    "buildasdasdad": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
     "nodemon": "nodemon src/server/server.js",
     "watchify": "watchify src/client/client.js -o public/client.js -v"
   },
