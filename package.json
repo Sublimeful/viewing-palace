@@ -5,7 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server/server.js"
+    "web": "node src/server/server.js",
+    "start": "concurrently --kill-others \"yarn run nodemon\" \"yarn run watchify\"",
+    "nodemon": "nodemon src/server/server.js",
+    "watchify": "watchify src/client/client.js -o public/client.js -v"
   },
   "repository": "Viewing Palace",
   "keywords": [
