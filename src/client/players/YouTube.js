@@ -3,7 +3,7 @@ const YouTubePlayer = require("youtube-player");
 class YouTube {
     constructor(video, socket) {
         this.socket = socket;
-        this.video = video;
+        this.data = video;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerContainer.id = "video-player";
@@ -12,7 +12,7 @@ class YouTube {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(video.id);
+        this.player.loadVideoById(this.data.id);
         this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
             console.log("from: " + this.state);
@@ -35,7 +35,7 @@ class YouTube {
                 case 3:
                     if(this.state == -1)
                         // Client who requested video got video loaded
-                        this.socket.emit("sync");
+                        this.socket.emit("sync", {currentTime: 0});
                     break;
                 case 5:
                     break;

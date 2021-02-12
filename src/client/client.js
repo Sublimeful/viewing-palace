@@ -4,8 +4,6 @@ const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
-const YouTube = require("./players/YouTube.js");
-const Raw = require("./players/Raw.js");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -31,7 +29,6 @@ addVideoInput.addEventListener("keyup", (event) => {
 });
 
 var videoManager = new VideoManager(socket);
-var syncThreshold = 1000;
 socket.on("play", (data) => {
     videoManager.playNew(data.video);
 });
@@ -42,11 +39,7 @@ socket.on("unpause", () => {
     videoManager.unpause();
 });
 socket.on("sync", (data) => {
-    videoManager.getCurrentTime().then((currentTime) => {
-        if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
-            videoManager.seekTo(data.currentTime);
-        }
-    });
+    videoManager.sync(data.currentTime);
 });
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";

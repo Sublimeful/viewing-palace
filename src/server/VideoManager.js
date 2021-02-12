@@ -54,6 +54,7 @@ class VideoManager {
                 this.timer.getCurrentTime() >
                     this.currentPlaying.duration - 1000
             ) {
+                console.log("ENDED");
                 const videoIndex = this.findIndex(this.currentPlaying);
                 this.currentPlaying = null;
                 if (videoIndex + 1 < this.queue.length) {

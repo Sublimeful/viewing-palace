@@ -8986,24 +8986,28 @@ module.exports = exports['default'];
 },{"load-script":33}],60:[function(require,module,exports){
 const { ResizeSensor } = require("css-element-queries");
 const YouTube = require("./players/YouTube.js");
+const Raw = require("./players/Raw.js");
 
-class VideoManager
-{
+class VideoManager {
     queue = [];
     elemQueue = [];
     queueElem = document.getElementById("playlist");
     currentVideo;
     socket;
-    resizeSensor = new ResizeSensor(document.querySelector("section#player"), () => {
-        if(this.currentVideo != null)
-            this.currentVideo.resize();
-    });
-    constructor(socket)
-    {
+    syncThreshold = 1000;
+    videoType;
+    isVideoRaw;
+    resizeSensor = new ResizeSensor(
+        document.querySelector("section#player"),
+        () => {
+            if (this.currentVideo != null) this.currentVideo.resize();
+        }
+    );
+    constructor(socket) {
         this.socket = socket;
     }
     isEqual(video, other) {
-        if(video == null || other == null) return false;
+        if (video == null || other == null) return false;
         if (video.type == "YouTube" && other.type == "YouTube") {
             return (
                 video.duration == other.duration &&
@@ -9020,58 +9024,65 @@ class VideoManager
     }
     /**
      * uses video equals method to get index of video
-     * 
+     *
      * returns -1 if not found at all (for some reason)
      */
-    findIndex(video)
-    {
-        for(var i = 0; i < this.queue.length; ++i)
-        {
-            if(this.isEqual(video, this.queue[i]))
-                return i;
+    findIndex(video) {
+        for (var i = 0; i < this.queue.length; ++i) {
+            if (this.isEqual(video, this.queue[i])) return i;
         }
         return -1;
     }
-    seekTo(time)
-    {
+    seekTo(time) {
         this.currentVideo.seekTo(time);
     }
-    pause()
-    {
+    pause() {
         this.currentVideo.pause();
     }
-    unpause()
-    {
+    unpause() {
         this.currentVideo.unpause();
     }
-    playNew(video)
-    {
-        if(videoManager.currentVideo != null)
-            videoManager.currentVideo.destroy();
-        if(video.type == "YouTube")
-        {
-            videoManager.playNew(new YouTube(video.id, socket));
+    playNew(video) {
+        if (this.currentVideo != null) this.currentVideo.destroy();
+        if (video.type == "YouTube") {
+            this.currentVideo = new YouTube(video, this.socket);
+            this.isVideoRaw = false;
+        } // is RAW
+        else {
+            this.currentVideo = new Raw(video, this.socket);
+            this.isVideoRaw = true;
         }
-        else // is RAW
-        {
-            videoManager.playNew(new Raw(video, socket))
-        }
-        this.currentVideo = video;
     }
-    getCurrentTime()
-    {
-        if(this.currentVideo != null)
+    getCurrentTime() {
+        if (this.currentVideo != null)
             return this.currentVideo.getCurrentTime();
     }
-    dequeue(video)
-    {
+    dequeue(video) {
         const index = this.findIndex(video);
-        this.queue.splice(index, 1); 
+        this.queue.splice(index, 1);
         this.elemQueue.splice(index, 1)[0].remove();
     }
-    enqueue(videos)
-    {
-        videos.forEach(video => {
+    sync(syncTime) {
+        if (this.currentVideo == null) return;
+        if (this.isVideoRaw) {
+            if (
+                Math.abs(
+                    syncTime - this.currentVideo.player.currentTime * 1000
+                ) >= this.syncThreshold
+            )
+                this.seekTo(syncTime);
+        } else {
+            this.getCurrentTime().then((currentTime) => {
+                if (
+                    Math.abs(syncTime - currentTime * 1000) >=
+                    this.syncThreshold
+                )
+                    this.seekTo(syncTime);
+            });
+        }
+    }
+    enqueue(videos) {
+        videos.forEach((video) => {
             const queueItem = document.createElement("div");
             queueItem.className = "playlist-video";
             const durationLabel = document.createElement("h1");
@@ -9086,21 +9097,20 @@ class VideoManager
             this.elemQueue.push(queueItem);
             this.queue.push(video);
             delButton.addEventListener("click", () => {
-                this.socket.emit("dequeue", {video: video});
-            })
-        })
+                this.socket.emit("dequeue", { video: video });
+            });
+        });
     }
 }
 module.exports = VideoManager;
-},{"./players/YouTube.js":63,"css-element-queries":8}],61:[function(require,module,exports){
+
+},{"./players/Raw.js":62,"./players/YouTube.js":63,"css-element-queries":8}],61:[function(require,module,exports){
 const connect = require("socket.io-client");
 const socket = connect("http://localhost:8080/");
 const addVideoInput = document.querySelector("#video-add-input");
 const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
-const YouTube = require("./players/YouTube.js");
-const Raw = require("./players/Raw.js");
 
 leaderButton.addEventListener("click", () => {
     socket.emit("leaderButtonPressed");
@@ -9126,7 +9136,6 @@ addVideoInput.addEventListener("keyup", (event) => {
 });
 
 var videoManager = new VideoManager(socket);
-var syncThreshold = 1000;
 socket.on("play", (data) => {
     videoManager.playNew(data.video);
 });
@@ -9137,11 +9146,7 @@ socket.on("unpause", () => {
     videoManager.unpause();
 });
 socket.on("sync", (data) => {
-    videoManager.getCurrentTime().then((currentTime) => {
-        if (Math.abs(data.currentTime - currentTime * 1000) >= syncThreshold) {
-            videoManager.seekTo(data.currentTime);
-        }
-    });
+    videoManager.sync(data.currentTime);
 });
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";
@@ -9158,28 +9163,55 @@ socket.on("enqueueAll", (data) => {
 socket.on("dequeue", (data) => {
     videoManager.dequeue(data.video);
 })
-},{"./VideoManager.js":60,"./players/Raw.js":62,"./players/YouTube.js":63,"socket.io-client":38}],62:[function(require,module,exports){
-class Raw
-{
-    constructor(video, socket)
-    {
-        fetch(video.url).then((res) => {
-            console.log(res.headers);
-        })
+},{"./VideoManager.js":60,"socket.io-client":38}],62:[function(require,module,exports){
+class Raw {
+    constructor(video, socket) {
+        this.socket = socket;
+        this.data = video;
+        this.playerElem = document.getElementById("player");
+        this.isVideo = false;
+        if (this.data.contentType == "video/mp4") this.isVideo = true;
+        this.player = document.createElement("video");
+        this.player.setAttribute("controls", "");
+        this.player.setAttribute("autoplay", "");
+        this.player.setAttribute("height", this.playerElem.clientHeight);
+        this.player.setAttribute("width", this.playerElem.clientWidth);
+        this.player.id = "video-player";
+        this.playerElem.appendChild(this.player);
+        this.player.src = this.data.url;
+        this.player.ontimeupdate = () => {
+            this.socket.emit("sync", {currentTime: this.player.currentTime});
+        }
+        this.player.onpause = () => {
+            this.socket.emit("pause");
+        }
+        this.player.play = () => {
+            this.socket.emit("play");
+        }
     }
-    destroy()
+    seekTo(time)
     {
-
+        this.player.currentTime = time/1000;
+    }
+    resize() {
+        if (this.isVideo) {
+            this.player.setAttribute("height", this.playerElem.clientHeight);
+            this.player.setAttribute("width", this.playerElem.clientWidth);
+        }
+    }
+    destroy() {
+        this.player.remove();
     }
 }
 module.exports = Raw;
+
 },{}],63:[function(require,module,exports){
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
-    constructor(id, socket) {
+    constructor(video, socket) {
         this.socket = socket;
-        this.id = id;
+        this.data = video;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerContainer.id = "video-player";
@@ -9188,7 +9220,7 @@ class YouTube {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(this.id);
+        this.player.loadVideoById(this.data.id);
         this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
             console.log("from: " + this.state);
@@ -9211,7 +9243,7 @@ class YouTube {
                 case 3:
                     if(this.state == -1)
                         // Client who requested video got video loaded
-                        this.socket.emit("sync");
+                        this.socket.emit("sync", {currentTime: 0});
                     break;
                 case 5:
                     break;
