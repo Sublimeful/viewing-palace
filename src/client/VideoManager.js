@@ -64,7 +64,7 @@ class VideoManager
             this.currentVideo.destroy();
         if(video.type == "YouTube")
         {
-            this.currentVideo = new YouTube(video.id, socket);
+            this.currentVideo = new YouTube(video, socket);
         }
         else // is RAW
         {

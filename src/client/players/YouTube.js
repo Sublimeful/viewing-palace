@@ -1,9 +1,9 @@
 const YouTubePlayer = require("youtube-player");
 
 class YouTube {
-    constructor(id, socket) {
+    constructor(video, socket) {
         this.socket = socket;
-        this.id = id;
+        this.video = video;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerContainer.id = "video-player";
@@ -12,7 +12,7 @@ class YouTube {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(this.id);
+        this.player.loadVideoById(video.id);
         this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
             console.log("from: " + this.state);
