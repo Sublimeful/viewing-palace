@@ -9043,12 +9043,18 @@ class VideoManager {
         this.currentVideo.unpause();
     }
     playNew(video) {
-        if (this.currentVideo != null) this.currentVideo.destroy();
         if (video.type == "YouTube") {
-            this.currentVideo = new YouTube(video, this.socket);
-            this.isVideoRaw = false;
+            if(this.isVideoRaw == false) //if currentVideo is Youtube as well
+                this.currentVideo.player.loadVideoById(video.id)
+            else
+            {
+                if (this.currentVideo != null) this.currentVideo.destroy();
+                this.currentVideo = new YouTube(video, this.socket);
+                this.isVideoRaw = false;
+            }
         } // is RAW
         else {
+            if (this.currentVideo != null) this.currentVideo.destroy();
             this.currentVideo = new Raw(video, this.socket);
             this.isVideoRaw = true;
         }
