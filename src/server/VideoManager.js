@@ -33,7 +33,7 @@ class VideoManager {
     loadVideo(socket) {
         if (this.currentPlaying != null)
             socket.emit("play", { video: this.currentPlaying });
-        socket.emit("enqueueAll", { videos: this.queue });
+        socket.emit("enqueue", { videos: this.queue });
     }
     //loads a new video for all users
     playNew(video) {
@@ -67,9 +67,22 @@ class VideoManager {
         socket.broadcast.emit("pause");
         this.timer.pauseTimer();
     }
+    move(videoIndex, newIndex) {
+        if (
+            newIndex >= 0 &&
+            newIndex < this.queue.length &&
+            videoIndex != newIndex
+        ) {
+            const tempVideo = this.queue[videoIndex];
+            this.queue[videoIndex] = this.queue[newIndex];
+            this.queue[newIndex] = tempVideo;
+            this.io.emit("move", { moveInfo: [videoIndex, newIndex] });
+        }
+    }
     //removes video
     dequeue(video) {
         this.queue.splice(this.findIndex(video), 1);
+        this.io.emit("dequeue", { video: video });
         if (this.isEqual(video, this.currentPlaying)) {
             const videoIndex = this.findIndex(this.currentPlaying);
             this.currentPlaying = null;
@@ -88,7 +101,7 @@ class VideoManager {
         // });
         // if (!duplicateVid) {
         this.queue.push(video);
-        this.io.emit("enqueue", { video: video });
+        this.io.emit("enqueue", { videos: [video] });
         if (this.currentPlaying == null) this.playNew(video);
         // }
     }

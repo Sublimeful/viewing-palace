@@ -8996,7 +8996,6 @@ class VideoManager {
     socket;
     syncThreshold = 1000;
     videoType;
-    isVideoRaw;
     resizeSensor = new ResizeSensor(
         document.querySelector("section#player"),
         () => {
@@ -9038,24 +9037,22 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
-            if (this.isVideoRaw == false)
+            if (this.currentVideo.type == "YouTube")
                 //if currentVideo is Youtube as well
                 this.currentVideo.player.loadVideoById(video.id);
             else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new YouTube(video, this.socket);
-                this.isVideoRaw = false;
             }
         } // is RAW
         else {
-            if (this.isVideoRaw == true) {
+            if (this.currentVideo.type == "YouTube") {
                 this.currentVideo.player.src = video.url;
                 this.currentVideo.player.load();
                 this.currentVideo.player.play();
             } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new Raw(video, this.socket);
-                this.isVideoRaw = true;
             }
         }
     }
@@ -9087,6 +9084,29 @@ class VideoManager {
             });
         }
     }
+    move(videoIndex, newIndex) {
+        if (
+            newIndex >= 0 &&
+            newIndex < this.queue.length &&
+            videoIndex != newIndex
+        ) {
+            console.log(videoIndex, newIndex);
+            if (newIndex > videoIndex)
+                this.queueElem.insertBefore(
+                    this.queueElem.children[videoIndex],
+                    this.queueElem.children[newIndex].nextSibling
+                );
+            else
+                this.queueElem.insertBefore(
+                    this.queueElem.children[newIndex],
+                    this.queueElem.children[videoIndex].nextSibling
+                );
+            const tempVideo = this.queue[videoIndex];
+            this.queue[videoIndex] = this.queue[newIndex];
+            this.queue[newIndex] = tempVideo;
+            console.log(this.queue);
+        }
+    }
     enqueue(videos) {
         videos.forEach((video) => {
             const queueItem = document.createElement("div");
@@ -9103,16 +9123,36 @@ class VideoManager {
                 seconds >= 10 ? seconds : "0" + seconds;
             const titleLabel = document.createElement("h1");
             titleLabel.textContent = video.title;
+            const playNowButton = document.createElement("button");
+            playNowButton.textContent = ">";
             const delButton = document.createElement("button");
             delButton.textContent = "X";
+            const moveDownButton = document.createElement("button");
+            moveDownButton.textContent = "V";
+            const moveUpButton = document.createElement("button");
+            moveUpButton.textContent = "^";
             this.queueElem.appendChild(queueItem);
             queueItem.appendChild(durationLabel);
             queueItem.appendChild(titleLabel);
             queueItem.appendChild(delButton);
+            queueItem.appendChild(playNowButton);
+            queueItem.appendChild(moveDownButton);
+            queueItem.appendChild(moveUpButton);
             this.elemQueue.push(queueItem);
             this.queue.push(video);
             delButton.addEventListener("click", () => {
                 this.socket.emit("dequeue", { video: video });
+            });
+            playNowButton.addEventListener("click", () => {
+                this.socket.emit("playNow", {video: video});
+            });
+            moveDownButton.addEventListener("click", () => {
+                const index = this.findIndex(video);
+                this.socket.emit("move", { moveInfo: [index, index + 1] });
+            });
+            moveUpButton.addEventListener("click", () => {
+                const index = this.findIndex(video);
+                this.socket.emit("move", { moveInfo: [index, index - 1] });
             });
         });
     }
@@ -9155,6 +9195,9 @@ var videoManager = new VideoManager(socket);
 socket.on("play", (data) => {
     videoManager.playNew(data.video);
 });
+socket.on("move", (data) => {
+    videoManager.move(data.moveInfo[0], data.moveInfo[1]);
+})
 socket.on("pause", () => {
     videoManager.pause();
 });
@@ -9171,17 +9214,15 @@ socket.on("unleadered", () => {
     leaderButton.style.backgroundColor = "";
 });
 socket.on("enqueue", (data) => {
-    videoManager.enqueue([data.video]);
-});
-socket.on("enqueueAll", (data) => {
     videoManager.enqueue(data.videos);
-})
+});
 socket.on("dequeue", (data) => {
     videoManager.dequeue(data.video);
 })
 },{"./VideoManager.js":60,"socket.io-client":38}],62:[function(require,module,exports){
 class Raw {
     constructor(video, socket) {
+        this.type = "Raw";
         this.socket = socket;
         this.playerElem = document.getElementById("player");
         this.player = document.createElement("video");
@@ -9229,6 +9270,7 @@ const YouTubePlayer = require("youtube-player");
 
 class YouTube {
     constructor(video, socket) {
+        this.type = "YouTube";
         this.socket = socket;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");

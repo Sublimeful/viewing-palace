@@ -2,6 +2,7 @@ const YouTubePlayer = require("youtube-player");
 
 class YouTube {
     constructor(video, socket) {
+        this.type = "YouTube";
         this.socket = socket;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");

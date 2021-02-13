@@ -33,6 +33,9 @@ var videoManager = new VideoManager(socket);
 socket.on("play", (data) => {
     videoManager.playNew(data.video);
 });
+socket.on("move", (data) => {
+    videoManager.move(data.moveInfo[0], data.moveInfo[1]);
+})
 socket.on("pause", () => {
     videoManager.pause();
 });
@@ -49,11 +52,8 @@ socket.on("unleadered", () => {
     leaderButton.style.backgroundColor = "";
 });
 socket.on("enqueue", (data) => {
-    videoManager.enqueue([data.video]);
-});
-socket.on("enqueueAll", (data) => {
     videoManager.enqueue(data.videos);
-})
+});
 socket.on("dequeue", (data) => {
     videoManager.dequeue(data.video);
 })

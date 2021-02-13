@@ -10,7 +10,6 @@ class VideoManager {
     socket;
     syncThreshold = 1000;
     videoType;
-    isVideoRaw;
     resizeSensor = new ResizeSensor(
         document.querySelector("section#player"),
         () => {
@@ -52,24 +51,21 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
-            if (this.isVideoRaw == false)
-                //if currentVideo is Youtube as well
+            if (this.currentVideo.type == "YouTube")
                 this.currentVideo.player.loadVideoById(video.id);
             else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new YouTube(video, this.socket);
-                this.isVideoRaw = false;
             }
         } // is RAW
         else {
-            if (this.isVideoRaw == true) {
+            if (this.currentVideo.type == "Raw") {
                 this.currentVideo.player.src = video.url;
                 this.currentVideo.player.load();
                 this.currentVideo.player.play();
             } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new Raw(video, this.socket);
-                this.isVideoRaw = true;
             }
         }
     }
@@ -84,21 +80,30 @@ class VideoManager {
     }
     sync(syncTime) {
         if (this.currentVideo == null) return;
-        if (this.isVideoRaw) {
-            if (
-                Math.abs(
-                    syncTime - this.currentVideo.player.currentTime * 1000
-                ) >= this.syncThreshold
-            )
+        this.getCurrentTime().then((currentTime) => {
+            if (Math.abs(syncTime - currentTime * 1000) >= this.syncThreshold)
                 this.seekTo(syncTime);
-        } else {
-            this.getCurrentTime().then((currentTime) => {
-                if (
-                    Math.abs(syncTime - currentTime * 1000) >=
-                    this.syncThreshold
-                )
-                    this.seekTo(syncTime);
-            });
+        });
+    }
+    move(videoIndex, newIndex) {
+        if (
+            newIndex >= 0 &&
+            newIndex < this.queue.length &&
+            videoIndex != newIndex
+        ) {
+            if (newIndex > videoIndex)
+                this.queueElem.insertBefore(
+                    this.queueElem.children[videoIndex],
+                    this.queueElem.children[newIndex].nextSibling
+                );
+            else
+                this.queueElem.insertBefore(
+                    this.queueElem.children[newIndex],
+                    this.queueElem.children[videoIndex].nextSibling
+                );
+            const tempVideo = this.queue[videoIndex];
+            this.queue[videoIndex] = this.queue[newIndex];
+            this.queue[newIndex] = tempVideo;
         }
     }
     enqueue(videos) {
@@ -138,10 +143,15 @@ class VideoManager {
                 this.socket.emit("dequeue", { video: video });
             });
             playNowButton.addEventListener("click", () => {
+                this.socket.emit("playNow", { video: video });
             });
             moveDownButton.addEventListener("click", () => {
+                const index = this.findIndex(video);
+                this.socket.emit("move", { moveInfo: [index, index + 1] });
             });
             moveUpButton.addEventListener("click", () => {
+                const index = this.findIndex(video);
+                this.socket.emit("move", { moveInfo: [index, index - 1] });
             });
         });
     }

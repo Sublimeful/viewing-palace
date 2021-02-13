@@ -1,5 +1,6 @@
 class Raw {
     constructor(video, socket) {
+        this.type = "Raw";
         this.socket = socket;
         this.playerElem = document.getElementById("player");
         this.player = document.createElement("video");
@@ -38,6 +39,12 @@ class Raw {
     }
     destroy() {
         this.player.remove();
+    }
+    getCurrentTime()
+    {
+        return new Promise((resolve, _) => {
+            resolve(this.player.currentTime);
+        })
     }
 }
 module.exports = Raw;

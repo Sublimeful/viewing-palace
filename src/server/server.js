@@ -17,24 +17,24 @@ var videoManager = new VideoManager(io);
 io.on("connection", (socket) => {
     socket.isSignedIn = false;
     videoManager.loadVideo(socket);
+    socket.on("playNow", (data) => {
+        if (socket.isLeader) videoManager.playNew(data.video);
+    });
+    socket.on("move", (data) => {
+        if (socket.isLeader)
+            videoManager.move(data.moveInfo[0], data.moveInfo[1]);
+    });
     socket.on("enqueue", (data) => {
         videoManager.parseInput(data.input, data.title);
     });
     socket.on("dequeue", (data) => {
-        if (socket.isLeader) {
-            videoManager.dequeue(data.video);
-            io.emit("dequeue", { video: data.video });
-        }
+        if (socket.isLeader) videoManager.dequeue(data.video);
     });
     socket.on("pause", () => {
-        if (socket.isLeader) {
-            videoManager.pause(socket);
-        }
+        if (socket.isLeader) videoManager.pause(socket);
     });
     socket.on("unpause", () => {
-        if (socket.isLeader) {
-            videoManager.unpause(socket);
-        }
+        if (socket.isLeader) videoManager.unpause(socket);
     });
     socket.on("signIn", (data) => {
         socket.username = data.username;
@@ -56,22 +56,16 @@ io.on("connection", (socket) => {
     });
     socket.on("sync", (data) => {
         if (videoManager.timer.currentTime == null) {
-            if (
-                data.duration != null &&
-                videoManager.currentPlaying != null
-            ) {
-                //if video is raw, then set the duration
+            if (data.duration != null && videoManager.currentPlaying != null)
                 videoManager.currentPlaying.duration = data.duration;
-                setTimeout(() => {
-                    videoManager.newVideoStarted();
-                }, 1000);
-            } else
-                setTimeout(() => {
-                    videoManager.newVideoStarted();
-                }, 1000);
-        } else if (socket.isLeader && data != null) { //if is leader, then set time
+            setTimeout(() => {
+                videoManager.newVideoStarted();
+            }, 1000);
+        } else if (socket.isLeader && data != null) {
+            //if is leader, then set time
             videoManager.timer.setTimer(data.currentTime);
-        } else { //otherwise sync time with server
+        } else {
+            //otherwise sync time with server
             socket.emit("sync", {
                 currentTime: videoManager.timer.getCurrentTime(),
             });
