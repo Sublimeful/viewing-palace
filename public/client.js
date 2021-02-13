@@ -9254,6 +9254,9 @@ class Raw {
             this.player.play = () => {
                 this.socket.emit("unpause");
             };
+            this.player.onended = () => {
+                this.socket.emit("videoEnded");
+            }
         }
     }
     pause() {
@@ -9304,6 +9307,9 @@ class YouTube {
                 case -1:
                     break;
                 case 0:
+                    if (this.state == 1)
+                        //client skipped and ended video
+                        this.socket.emit("videoEnded");
                     break;
                 case 1:
                     if (this.state == 2)
@@ -9326,8 +9332,7 @@ class YouTube {
             this.state = event.data;
         });
         this.player.playVideo();
-        if (this.isLivestream == false)
-            this.initSyncer();
+        if (this.isLivestream == false) this.initSyncer();
     }
     initSyncer() {
         this.syncer = setInterval(() => {

@@ -20,6 +20,9 @@ io.on("connection", (socket) => {
     socket.on("playNow", (data) => {
         if (socket.isLeader) videoManager.playNew(data.video);
     });
+    socket.on("videoEnded", () => {
+        if (socket.isLeader) videoManager.playNext();
+    });
     socket.on("move", (data) => {
         if (socket.isLeader)
             videoManager.move(data.moveInfo[0], data.moveInfo[1]);
@@ -56,7 +59,8 @@ io.on("connection", (socket) => {
     });
     socket.on("sync", (data) => {
         if (videoManager.timer.currentTime == null) {
-            if (data.duration != null && videoManager.currentPlaying != null) //only applies for raws whose duration is null
+            if (data.duration != null && videoManager.currentPlaying != null)
+                //only applies for raws whose duration is null
                 videoManager.currentPlaying.duration = data.duration;
             setTimeout(() => {
                 videoManager.newVideoStarted();

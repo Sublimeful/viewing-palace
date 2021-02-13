@@ -42,6 +42,13 @@ class VideoManager {
         this.currentPlaying = video;
         this.io.emit("play", { video: video });
     }
+    playNext() {
+        if (this.currentPlaying == null) return;
+        const videoIndex = this.findIndex(this.currentPlaying);
+        if (videoIndex + 1 < this.queue.length) {
+            this.playNew(this.queue[videoIndex + 1]);
+        }
+    }
     newVideoStarted() {
         if (this.timer.currentTime != null) return;
         console.log("new video");
@@ -53,10 +60,7 @@ class VideoManager {
                     this.currentPlaying.duration - 1000
             ) {
                 console.log("Video playback has ended!");
-                const videoIndex = this.findIndex(this.currentPlaying);
-                if (videoIndex + 1 < this.queue.length) {
-                    this.playNew(this.queue[videoIndex + 1]);
-                }
+                this.playNext();
                 clearInterval(videoEndedChecker);
             }
         }, 1000);
@@ -85,9 +89,7 @@ class VideoManager {
     dequeue(video) {
         const videoIndex = this.findIndex(video);
         if (this.isEqual(video, this.currentPlaying)) {
-            if (videoIndex + 1 < this.queue.length) {
-                this.playNew(this.queue[videoIndex + 1]);
-            }
+            this.playNext();
         }
         this.queue.splice(videoIndex, 1);
         this.io.emit("dequeue", { video: video });

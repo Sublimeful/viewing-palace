@@ -22,6 +22,9 @@ class Raw {
             this.player.play = () => {
                 this.socket.emit("unpause");
             };
+            this.player.onended = () => {
+                this.socket.emit("videoEnded");
+            }
         }
     }
     pause() {
