@@ -16,7 +16,7 @@ class YouTube {
                 return url.match(matchPlaylist)[1];
         }
     }
-    static requestVideoData(url, id = null) {
+    static requestVideoData(url, id) {
         if (id == null) id = YouTube.getVideoId(url, "Video");
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${apiKey}`;

@@ -9009,14 +9009,10 @@ class VideoManager {
     isEqual(video, other) {
         if (video == null || other == null) return false;
         if (video.type == "YouTube" && other.type == "YouTube") {
-            return (
-                video.duration == other.duration &&
-                video.id == other.id
-            );
+            return video.duration == other.duration && video.id == other.id;
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
-                video.contentType == other.contentType &&
-                video.url == other.url
+                video.contentType == other.contentType && video.url == other.url
             );
         } else return false;
     }
@@ -9042,24 +9038,21 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
-            if(this.isVideoRaw == false) //if currentVideo is Youtube as well
-                this.currentVideo.player.loadVideoById(video.id)
-            else
-            {
+            if (this.isVideoRaw == false)
+                //if currentVideo is Youtube as well
+                this.currentVideo.player.loadVideoById(video.id);
+            else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new YouTube(video, this.socket);
                 this.isVideoRaw = false;
             }
         } // is RAW
         else {
-            if(this.isVideoRaw == true)
-            {
+            if (this.isVideoRaw == true) {
                 this.currentVideo.player.src = video.url;
                 this.currentVideo.player.load();
                 this.currentVideo.player.play();
-            }
-            else
-            {
+            } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new Raw(video, this.socket);
                 this.isVideoRaw = true;
@@ -9099,10 +9092,19 @@ class VideoManager {
             const queueItem = document.createElement("div");
             queueItem.className = "playlist-video";
             const durationLabel = document.createElement("h1");
-            durationLabel.textContent = video.duration;
+            const hours = Math.floor(video.duration / 1000 / 60 / 60);
+            const minutes = Math.floor((video.duration / 1000 / 60) % 60);
+            const seconds = (video.duration / 1000) % 60;
+            durationLabel.textContent +=
+                hours > 0 ? (hours >= 10 ? hours : "0" + hours) + ":" : "";
+            durationLabel.textContent +=
+                (minutes >= 10 ? minutes : "0" + minutes) + ":";
+            durationLabel.textContent +=
+                seconds >= 10 ? seconds : "0" + seconds;
             const titleLabel = document.createElement("h1");
             titleLabel.textContent = video.title;
             const delButton = document.createElement("button");
+            delButton.textContent = "X";
             this.queueElem.appendChild(queueItem);
             queueItem.appendChild(durationLabel);
             queueItem.appendChild(titleLabel);
@@ -9144,7 +9146,7 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("enqueue", { input: addVideoInput.value, title: addVideoTitle.value });
+        socket.emit("enqueue", { input: addVideoInput.value.trim(), title: addVideoTitle.value.trim() });
         addVideoInput.value = "";
     }
 });

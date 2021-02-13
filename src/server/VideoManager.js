@@ -94,7 +94,7 @@ class VideoManager {
     }
 
     //queues up a video, playnew if no video is on
-    parseInput(userInput, title = null) {
+    parseInput(userInput, title) {
         const matchYouTubeVideo = /^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/)[A-z0-9_-]{11}/;
         const matchYouTubePlaylist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=)[A-z0-9_-]+/;
 
@@ -102,7 +102,7 @@ class VideoManager {
             const request = YouTube.requestVideoData(userInput);
             request
                 .then((video) => {
-                    video.title = title;
+                    if (title) video.title = title;
                     this.enqueue(video);
                 })
                 .catch((err) => console.error(err));
@@ -111,7 +111,7 @@ class VideoManager {
             request
                 .then((videos) => {
                     videos.forEach((video) => {
-                        video.title = title;
+                        if (title) video.title = title;
                         this.enqueue(video);
                     });
                 })
@@ -121,7 +121,7 @@ class VideoManager {
             const request = Raw.requestVideoData(userInput);
             request
                 .then((video) => {
-                    video.title = title;
+                    if (title) video.title = title;
                     this.enqueue(video);
                 })
                 .catch((err) => console.error(err));

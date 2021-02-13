@@ -24,7 +24,7 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("enqueue", { input: addVideoInput.value, title: addVideoTitle.value });
+        socket.emit("enqueue", { input: addVideoInput.value.trim(), title: addVideoTitle.value.trim() });
         addVideoInput.value = "";
     }
 });
