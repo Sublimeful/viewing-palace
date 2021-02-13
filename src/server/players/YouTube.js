@@ -51,31 +51,31 @@ class YouTube {
                 .catch((err) => reject(err));
         });
     }
-    static requestPlaylistData(url) {
+    static enqueuePlaylist(url, maxResults, videoManager) {
         const id = YouTube.getVideoId(url, "Playlist");
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&fields=nextPageToken,items(snippet/resourceId/videoId)&playlistId=${id}&key=${apiKey}`;
-        return new Promise((resolve, reject) => {
-            var res = [];
-            fetch(fetchUrl)
-                .then((res) => res.json())
-                .then((json) => {
-                    if (json.items == null) return;
-                    const resolver = async () => {
-                        const pusher = async () => {
-                            for (var i = 0; i < json.items.length; ++i) {
-                                const item = json.items[i];
-                                const id = item.snippet.resourceId.videoId;
-                                res.push(await this.requestVideoData(null, id));
-                            }
-                        };
-                        await pusher();
-                        resolve(res);
-                    };
-                    resolver();
-                })
-                .catch((err) => reject(err));
-        });
+        const executor = async() => {
+            var json = await (await fetch(fetchUrl)).json();
+            if (json.items == null) return;
+            for (var i = 0; i < json.items.length; ++i) {
+                if(maxResults-- == 0) return;
+                const item = json.items[i];
+                const id = item.snippet.resourceId.videoId;
+                videoManager.enqueue(await this.requestVideoData(null, id));
+            }
+            while(json.nextPageToken != null)
+            {
+                json = await (await fetch(fetchUrl + "&pageToken=" + json.nextPageToken)).json();
+                for (var i = 0; i < json.items.length; ++i) {
+                    if(maxResults-- == 0) return;
+                    const item = json.items[i];
+                    const id = item.snippet.resourceId.videoId;
+                    videoManager.enqueue(await this.requestVideoData(null, id));
+                }
+            }
+        }
+        executor();
     }
 }
 export default YouTube;

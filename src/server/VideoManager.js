@@ -7,6 +7,7 @@ class VideoManager {
         this.queue = [];
         this.currentPlaying = null;
         this.timer = new Timer();
+        this.maxResults = 10;
     }
     isEqual(video, other) {
         if (video == null || other == null) return false;
@@ -120,15 +121,7 @@ class VideoManager {
                 })
                 .catch((err) => console.error(err));
         } else if (matchYouTubePlaylist.test(userInput)) {
-            const request = YouTube.requestPlaylistData(userInput);
-            request
-                .then((videos) => {
-                    videos.forEach((video) => {
-                        if (title) video.title = title;
-                        this.enqueue(video);
-                    });
-                })
-                .catch((err) => console.error(err));
+            YouTube.enqueuePlaylist(userInput, this.maxResults, this);
         } else {
             //is RAW
             const request = Raw.requestVideoData(userInput);
