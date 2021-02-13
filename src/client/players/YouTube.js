@@ -3,20 +3,17 @@ const YouTubePlayer = require("youtube-player");
 class YouTube {
     constructor(video, socket) {
         this.socket = socket;
-        this.data = video;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
-        this.playerContainer.id = "video-player";
         this.playerElem.appendChild(this.playerContainer);
+        this.playerContainer.id = "video-player";
         this.player = YouTubePlayer("video-player", {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(this.data.id);
+        this.player.loadVideoById(video.id);
         this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
-            console.log("from: " + this.state);
-            console.log("to: " + event.data);
             switch (event.data) {
                 case -1:
                     break;

@@ -9016,7 +9016,6 @@ class VideoManager {
             );
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
-                video.duration == other.duration &&
                 video.contentType == other.contentType &&
                 video.url == other.url
             );
@@ -9054,9 +9053,18 @@ class VideoManager {
             }
         } // is RAW
         else {
-            if (this.currentVideo != null) this.currentVideo.destroy();
-            this.currentVideo = new Raw(video, this.socket);
-            this.isVideoRaw = true;
+            if(this.isVideoRaw == true)
+            {
+                this.currentVideo.player.src = video.url;
+                this.currentVideo.player.load();
+                this.currentVideo.player.play();
+            }
+            else
+            {
+                if (this.currentVideo != null) this.currentVideo.destroy();
+                this.currentVideo = new Raw(video, this.socket);
+                this.isVideoRaw = true;
+            }
         }
     }
     getCurrentTime() {
@@ -9173,37 +9181,40 @@ socket.on("dequeue", (data) => {
 class Raw {
     constructor(video, socket) {
         this.socket = socket;
-        this.data = video;
         this.playerElem = document.getElementById("player");
-        this.isVideo = false;
-        if (this.data.contentType == "video/mp4") this.isVideo = true;
         this.player = document.createElement("video");
+        this.playerElem.appendChild(this.player);
         this.player.setAttribute("controls", "");
         this.player.setAttribute("autoplay", "");
         this.player.setAttribute("height", this.playerElem.clientHeight);
         this.player.setAttribute("width", this.playerElem.clientWidth);
         this.player.id = "video-player";
-        this.playerElem.appendChild(this.player);
-        this.player.src = this.data.url;
-        this.player.ontimeupdate = () => {
-            this.socket.emit("sync", {currentTime: this.player.currentTime});
-        }
-        this.player.onpause = () => {
-            this.socket.emit("pause");
-        }
-        this.player.play = () => {
-            this.socket.emit("play");
+        this.player.src = video.url;
+        this.player.oncanplay = () => {
+            this.player.play();
+            this.player.ontimeupdate = () => {
+                this.socket.emit("sync", { currentTime: this.player.currentTime, duration: this.player.duration * 1000 });
+            };
+            this.player.onpause = () => {
+                this.socket.emit("pause");
+            };
+            this.player.play = () => {
+                this.socket.emit("unpause");
+            };
         }
     }
-    seekTo(time)
-    {
-        this.player.currentTime = time/1000;
+    pause() {
+        this.player.pause();
+    }
+    unpause() {
+        this.player.play();
+    }
+    seekTo(time) {
+        this.player.currentTime = time / 1000;
     }
     resize() {
-        if (this.isVideo) {
-            this.player.setAttribute("height", this.playerElem.clientHeight);
-            this.player.setAttribute("width", this.playerElem.clientWidth);
-        }
+        this.player.setAttribute("height", this.playerElem.clientHeight);
+        this.player.setAttribute("width", this.playerElem.clientWidth);
     }
     destroy() {
         this.player.remove();
@@ -9217,20 +9228,17 @@ const YouTubePlayer = require("youtube-player");
 class YouTube {
     constructor(video, socket) {
         this.socket = socket;
-        this.data = video;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
-        this.playerContainer.id = "video-player";
         this.playerElem.appendChild(this.playerContainer);
+        this.playerContainer.id = "video-player";
         this.player = YouTubePlayer("video-player", {
             height: this.playerElem.clientHeight,
             width: this.playerElem.clientWidth,
         });
-        this.player.loadVideoById(this.data.id);
+        this.player.loadVideoById(video.id);
         this.state = this.player.getPlayerState();
         this.player.on("stateChange", (event) => {
-            console.log("from: " + this.state);
-            console.log("to: " + event.data);
             switch (event.data) {
                 case -1:
                     break;

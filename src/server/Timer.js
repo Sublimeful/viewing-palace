@@ -22,7 +22,6 @@ class Timer {
         this.timeMarker = new Date().getTime();
     }
     pauseTimer() {
-        this.currentTime += new Date().getTime() - this.timeMarker;
         this.timeMarker = null;
     }
     setTimer(time) {

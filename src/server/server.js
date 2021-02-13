@@ -21,12 +21,11 @@ io.on("connection", (socket) => {
         videoManager.parseInput(data.input, socket);
     });
     socket.on("dequeue", (data) => {
-        if (socket.isLeader)
-        {
+        if (socket.isLeader) {
             videoManager.dequeue(data.video);
-            io.emit("dequeue", {video: data.video});
+            io.emit("dequeue", { video: data.video });
         }
-    })
+    });
     socket.on("pause", () => {
         if (socket.isLeader) {
             videoManager.pause(socket);
@@ -57,10 +56,19 @@ io.on("connection", (socket) => {
     });
     socket.on("sync", (data) => {
         if (videoManager.timer.currentTime == null) {
-            setTimeout(() => {
-                videoManager.timer.startTimer();
-                videoManager.newVideoStarted();
-            }, 1000)
+            if (
+                data.duration != null &&
+                videoManager.currentPlaying != null
+            ) {
+                //if video is raw, then set the duration
+                videoManager.currentPlaying.duration = data.duration;
+                setTimeout(() => {
+                    videoManager.newVideoStarted();
+                }, 1000);
+            } else
+                setTimeout(() => {
+                    videoManager.newVideoStarted();
+                }, 1000);
         } else if (socket.isLeader && data != null) {
             videoManager.timer.setTimer(data.currentTime * 1000);
         } else {

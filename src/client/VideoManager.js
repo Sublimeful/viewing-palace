@@ -30,7 +30,6 @@ class VideoManager {
             );
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
-                video.duration == other.duration &&
                 video.contentType == other.contentType &&
                 video.url == other.url
             );
@@ -68,9 +67,18 @@ class VideoManager {
             }
         } // is RAW
         else {
-            if (this.currentVideo != null) this.currentVideo.destroy();
-            this.currentVideo = new Raw(video, this.socket);
-            this.isVideoRaw = true;
+            if(this.isVideoRaw == true)
+            {
+                this.currentVideo.player.src = video.url;
+                this.currentVideo.player.load();
+                this.currentVideo.player.play();
+            }
+            else
+            {
+                if (this.currentVideo != null) this.currentVideo.destroy();
+                this.currentVideo = new Raw(video, this.socket);
+                this.isVideoRaw = true;
+            }
         }
     }
     getCurrentTime() {

@@ -1,37 +1,40 @@
 class Raw {
     constructor(video, socket) {
         this.socket = socket;
-        this.data = video;
         this.playerElem = document.getElementById("player");
-        this.isVideo = false;
-        if (this.data.contentType == "video/mp4") this.isVideo = true;
         this.player = document.createElement("video");
+        this.playerElem.appendChild(this.player);
         this.player.setAttribute("controls", "");
         this.player.setAttribute("autoplay", "");
         this.player.setAttribute("height", this.playerElem.clientHeight);
         this.player.setAttribute("width", this.playerElem.clientWidth);
         this.player.id = "video-player";
-        this.playerElem.appendChild(this.player);
-        this.player.src = this.data.url;
-        this.player.ontimeupdate = () => {
-            this.socket.emit("sync", {currentTime: this.player.currentTime});
-        }
-        this.player.onpause = () => {
-            this.socket.emit("pause");
-        }
-        this.player.play = () => {
-            this.socket.emit("play");
+        this.player.src = video.url;
+        this.player.oncanplay = () => {
+            this.player.play();
+            this.player.ontimeupdate = () => {
+                this.socket.emit("sync", { currentTime: this.player.currentTime, duration: this.player.duration * 1000 });
+            };
+            this.player.onpause = () => {
+                this.socket.emit("pause");
+            };
+            this.player.play = () => {
+                this.socket.emit("unpause");
+            };
         }
     }
-    seekTo(time)
-    {
-        this.player.currentTime = time/1000;
+    pause() {
+        this.player.pause();
+    }
+    unpause() {
+        this.player.play();
+    }
+    seekTo(time) {
+        this.player.currentTime = time / 1000;
     }
     resize() {
-        if (this.isVideo) {
-            this.player.setAttribute("height", this.playerElem.clientHeight);
-            this.player.setAttribute("width", this.playerElem.clientWidth);
-        }
+        this.player.setAttribute("height", this.playerElem.clientHeight);
+        this.player.setAttribute("width", this.playerElem.clientWidth);
     }
     destroy() {
         this.player.remove();

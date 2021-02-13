@@ -18,7 +18,6 @@ class VideoManager {
             );
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
-                video.duration == other.duration &&
                 video.contentType == other.contentType &&
                 video.url == other.url
             );
@@ -48,13 +47,14 @@ class VideoManager {
         this.io.emit("play", { video: video });
     }
     newVideoStarted() {
+        this.timer.startTimer();
         var videoEndedChecker = setInterval(() => {
             if (
                 this.currentPlaying != null &&
                 this.timer.getCurrentTime() >
                     this.currentPlaying.duration - 1000
             ) {
-                console.log("ENDED");
+                console.log("Video playback has ended!")
                 const videoIndex = this.findIndex(this.currentPlaying);
                 this.currentPlaying = null;
                 if (videoIndex + 1 < this.queue.length) {
