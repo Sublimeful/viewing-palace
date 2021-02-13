@@ -54,7 +54,6 @@ class VideoManager {
             ) {
                 console.log("Video playback has ended!");
                 const videoIndex = this.findIndex(this.currentPlaying);
-                this.currentPlaying = null;
                 if (videoIndex + 1 < this.queue.length) {
                     this.playNew(this.queue[videoIndex + 1]);
                 }
@@ -84,15 +83,14 @@ class VideoManager {
     }
     //removes video
     dequeue(video) {
-        this.queue.splice(this.findIndex(video), 1);
-        this.io.emit("dequeue", { video: video });
+        const videoIndex = this.findIndex(video);
         if (this.isEqual(video, this.currentPlaying)) {
-            const videoIndex = this.findIndex(this.currentPlaying);
-            this.currentPlaying = null;
             if (videoIndex + 1 < this.queue.length) {
                 this.playNew(this.queue[videoIndex + 1]);
             }
         }
+        this.queue.splice(videoIndex, 1);
+        this.io.emit("dequeue", { video: video });
     }
     enqueue(video) {
         this.queue.push(video);

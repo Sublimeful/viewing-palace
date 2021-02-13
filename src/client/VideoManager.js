@@ -51,9 +51,16 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
-            if(this.currentVideo != null && this.currentVideo.isLivestream == true && video.isLivestream == false)
+            if (
+                this.currentVideo != null &&
+                this.currentVideo.isLivestream == true &&
+                video.isLivestream == false
+            )
                 this.currentVideo.initSyncer(); //initialize the syncer if last was livestream but this is not livestream
-            if (this.currentVideo != null && this.currentVideo.type == "YouTube")
+            if (
+                this.currentVideo != null &&
+                this.currentVideo.type == "YouTube"
+            )
                 this.currentVideo.player.loadVideoById(video.id);
             else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
@@ -106,6 +113,9 @@ class VideoManager {
             const tempVideo = this.queue[videoIndex];
             this.queue[videoIndex] = this.queue[newIndex];
             this.queue[newIndex] = tempVideo;
+            const tempElem = this.elemQueue[videoIndex];
+            this.elemQueue[videoIndex] = this.elemQueue[newIndex];
+            this.elemQueue[newIndex] = tempElem;
         }
     }
     enqueue(videos) {
