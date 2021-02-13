@@ -51,7 +51,7 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
-            if (this.currentVideo.type == "YouTube")
+            if (this.currentVideo != null && this.currentVideo.type == "YouTube")
                 this.currentVideo.player.loadVideoById(video.id);
             else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
@@ -59,7 +59,7 @@ class VideoManager {
             }
         } // is RAW
         else {
-            if (this.currentVideo.type == "Raw") {
+            if (this.currentVideo != null && this.currentVideo.type == "Raw") {
                 this.currentVideo.player.src = video.url;
                 this.currentVideo.player.load();
                 this.currentVideo.player.play();
@@ -122,14 +122,27 @@ class VideoManager {
                 seconds >= 10 ? seconds : "0" + seconds;
             const titleLabel = document.createElement("h1");
             titleLabel.textContent = video.title;
-            const playNowButton = document.createElement("button");
-            playNowButton.textContent = ">";
             const delButton = document.createElement("button");
             delButton.textContent = "X";
+
+            const playNowButton = document.createElement("button");
+            var svg = document.createElement("img");
+            svg.src = "/svg/play-button.svg";
+            svg.style.width = "50%";
+            playNowButton.style.padding = "4px 0 0 3px";
+            playNowButton.appendChild(svg);
+
             const moveDownButton = document.createElement("button");
-            moveDownButton.textContent = "V";
+            var svg = document.createElement("img");
+            svg.src = "/svg/down-arrow.svg";
+            moveDownButton.style.paddingTop = "5px";
+            moveDownButton.appendChild(svg);
+
             const moveUpButton = document.createElement("button");
-            moveUpButton.textContent = "^";
+            var svg = document.createElement("img");
+            svg.src = "/svg/up-arrow.svg";
+            moveUpButton.appendChild(svg);
+
             this.queueElem.appendChild(queueItem);
             queueItem.appendChild(durationLabel);
             queueItem.appendChild(titleLabel);
