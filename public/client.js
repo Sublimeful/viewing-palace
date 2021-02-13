@@ -9276,6 +9276,7 @@ class YouTube {
     constructor(video, socket) {
         this.type = "YouTube";
         this.socket = socket;
+        this.isLivestream = video.isLivestream;
         this.playerElem = document.getElementById("player");
         this.playerContainer = document.createElement("div");
         this.playerElem.appendChild(this.playerContainer);
@@ -9293,7 +9294,7 @@ class YouTube {
                 case 0:
                     break;
                 case 1:
-                    if(this.state == 2)
+                    if (this.state == 2)
                         // Client unpaused video
                         this.socket.emit("unpause");
                     break;
@@ -9303,46 +9304,45 @@ class YouTube {
                         this.socket.emit("pause");
                     break;
                 case 3:
-                    if(this.state == -1)
+                    if (this.isLivestream) break;
+                    if (this.state == -1)
                         // Client who requested video got video loaded
-                        this.socket.emit("sync", {currentTime: 0});
+                        this.socket.emit("sync", { currentTime: 0 });
                     break;
                 case 5:
                     break;
             }
             this.state = event.data;
         });
+        if (this.isLivestream) return;
         this.player.playVideo();
         this.syncer = setInterval(() => {
-            if(this.state == 1)
-            {
-                this.player.getCurrentTime().then(time => {
-                    this.socket.emit("sync", {currentTime: time * 1000});
-                })
+            if (this.state == 1) {
+                this.player.getCurrentTime().then((time) => {
+                    this.socket.emit("sync", { currentTime: time * 1000 });
+                });
             }
-        }, 100)
+        }, 100);
     }
     pause() {
         this.player.pauseVideo();
     }
-    unpause()
-    {
+    unpause() {
         this.player.playVideo();
     }
-    seekTo(time)
-    {
-        this.player.seekTo(time/1000, true);
+    seekTo(time) {
+        this.player.seekTo(time / 1000, true);
     }
-    getCurrentTime()
-    {
+    getCurrentTime() {
         return this.player.getCurrentTime();
     }
-    resize()
-    {
-        this.player.setSize(this.playerElem.clientWidth, this.playerElem.clientHeight);
+    resize() {
+        this.player.setSize(
+            this.playerElem.clientWidth,
+            this.playerElem.clientHeight
+        );
     }
-    destroy()
-    {
+    destroy() {
         clearInterval(this.syncer);
         this.player.destroy();
     }

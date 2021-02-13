@@ -5,6 +5,7 @@ class YouTube {
         this.id = id;
         this.title = title;
         this.duration = duration;
+        this.isLivestream = false;
     }
     static getVideoId(url, type) {
         const matchVideo = /youtube\.com.*v=([A-z0-9_-]+)/;
@@ -46,7 +47,9 @@ class YouTube {
                         seconds * 1000 +
                         minutes * 60 * 1000 +
                         hours * 60 * 60 * 1000;
-                    resolve(new YouTube(id, item.snippet.title, duration));
+                    var ret = new YouTube(id, item.snippet.title, duration);
+                    if(duration == 0) ret.isLivestream = true;
+                    resolve(ret);
                 })
                 .catch((err) => reject(err));
         });

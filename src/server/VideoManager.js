@@ -43,6 +43,11 @@ class VideoManager {
         this.io.emit("play", { video: video });
     }
     newVideoStarted() {
+        if (
+            this.currentPlaying != null &&
+            this.currentPlaying.isLivestream == true
+        )
+            return;
         this.timer.startTimer();
         var videoEndedChecker = setInterval(() => {
             if (
