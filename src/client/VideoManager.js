@@ -51,6 +51,8 @@ class VideoManager {
     }
     playNew(video) {
         if (video.type == "YouTube") {
+            if(this.currentVideo != null && this.currentVideo.isLivestream == true && video.isLivestream == false)
+                this.currentVideo.initSyncer(); //initialize the syncer if last was livestream but this is not livestream
             if (this.currentVideo != null && this.currentVideo.type == "YouTube")
                 this.currentVideo.player.loadVideoById(video.id);
             else {

@@ -32,8 +32,7 @@ class YouTube {
                         this.socket.emit("pause");
                     break;
                 case 3:
-                    if (this.isLivestream) break;
-                    if (this.state == -1)
+                    if (this.isLivestream == false && this.state == -1)
                         // Client who requested video got video loaded
                         this.socket.emit("sync", { currentTime: 0 });
                     break;
@@ -42,8 +41,11 @@ class YouTube {
             }
             this.state = event.data;
         });
-        if (this.isLivestream) return;
         this.player.playVideo();
+        if (this.isLivestream == false)
+            this.initSyncer();
+    }
+    initSyncer() {
         this.syncer = setInterval(() => {
             if (this.state == 1) {
                 this.player.getCurrentTime().then((time) => {

@@ -56,7 +56,7 @@ io.on("connection", (socket) => {
     });
     socket.on("sync", (data) => {
         if (videoManager.timer.currentTime == null) {
-            if (data.duration != null && videoManager.currentPlaying != null)
+            if (data.duration != null && videoManager.currentPlaying != null) //only applies for raws whose duration is null
                 videoManager.currentPlaying.duration = data.duration;
             setTimeout(() => {
                 videoManager.newVideoStarted();

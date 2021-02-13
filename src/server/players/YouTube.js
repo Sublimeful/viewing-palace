@@ -8,11 +8,11 @@ class YouTube {
         this.isLivestream = false;
     }
     static getVideoId(url, type) {
-        const matchVideo = /youtube\.com.*v=([A-z0-9_-]+)/;
+        const matchVideo = /(?<=^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/))[A-z0-9_-]{11}/;
         const matchPlaylist = /youtube\.com.*list=([A-z0-9_-]+)/;
         switch (type) {
             case "Video":
-                return url.match(matchVideo)[1];
+                return url.match(matchVideo)[0];
             case "Playlist":
                 return url.match(matchPlaylist)[1];
         }

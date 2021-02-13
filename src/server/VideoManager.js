@@ -43,11 +43,8 @@ class VideoManager {
         this.io.emit("play", { video: video });
     }
     newVideoStarted() {
-        if (
-            this.currentPlaying != null &&
-            this.currentPlaying.isLivestream == true
-        )
-            return;
+        if (this.timer.currentTime != null) return;
+        console.log("new video");
         this.timer.startTimer();
         var videoEndedChecker = setInterval(() => {
             if (
@@ -98,18 +95,9 @@ class VideoManager {
         }
     }
     enqueue(video) {
-        // var duplicateVid = false; <------------------------------ Enable Duplicate videos
-        // this.queue.forEach((otherVid) => {
-        //     if (this.isEqual(video, otherVid)) {
-        //         duplicateVid = true;
-        //         return;
-        //     }
-        // });
-        // if (!duplicateVid) {
         this.queue.push(video);
         this.io.emit("enqueue", { videos: [video] });
         if (this.currentPlaying == null) this.playNew(video);
-        // }
     }
 
     //queues up a video, playnew if no video is on
