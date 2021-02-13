@@ -1,6 +1,7 @@
 const connect = require("socket.io-client");
 const socket = connect();
 const addVideoInput = document.querySelector("#video-add-input");
+const addVideoTitle = document.querySelector("#video-add-title");
 const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
@@ -23,7 +24,7 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("enqueue", { input: addVideoInput.value });
+        socket.emit("enqueue", { input: addVideoInput.value, title: addVideoTitle.value });
         addVideoInput.value = "";
     }
 });

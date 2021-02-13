@@ -44,7 +44,7 @@ class YouTube {
             if(this.state == 1)
             {
                 this.player.getCurrentTime().then(time => {
-                    this.socket.emit("sync", {currentTime: time});
+                    this.socket.emit("sync", {currentTime: time * 1000});
                 })
             }
         }, 100)

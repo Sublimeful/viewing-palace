@@ -32,6 +32,15 @@
     color: white;
     font-size: larger;
 }
+#video-add-title
+{
+    border: 1px solid white;
+    width: 100%;
+    background-color: transparent;
+    text-align: center;
+    color: white;
+    font-size: larger;
+}
 .video-button
 {
     border-radius: 100%;

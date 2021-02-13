@@ -18,7 +18,7 @@ io.on("connection", (socket) => {
     socket.isSignedIn = false;
     videoManager.loadVideo(socket);
     socket.on("enqueue", (data) => {
-        videoManager.parseInput(data.input, socket);
+        videoManager.parseInput(data.input, data.title);
     });
     socket.on("dequeue", (data) => {
         if (socket.isLeader) {
@@ -69,9 +69,9 @@ io.on("connection", (socket) => {
                 setTimeout(() => {
                     videoManager.newVideoStarted();
                 }, 1000);
-        } else if (socket.isLeader && data != null) {
-            videoManager.timer.setTimer(data.currentTime * 1000);
-        } else {
+        } else if (socket.isLeader && data != null) { //if is leader, then set time
+            videoManager.timer.setTimer(data.currentTime);
+        } else { //otherwise sync time with server
             socket.emit("sync", {
                 currentTime: videoManager.timer.getCurrentTime(),
             });

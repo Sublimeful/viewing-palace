@@ -13,7 +13,7 @@ class Raw {
         this.player.oncanplay = () => {
             this.player.play();
             this.player.ontimeupdate = () => {
-                this.socket.emit("sync", { currentTime: this.player.currentTime, duration: this.player.duration * 1000 });
+                this.socket.emit("sync", { currentTime: this.player.currentTime * 1000, duration: this.player.duration * 1000 });
             };
             this.player.onpause = () => {
                 this.socket.emit("pause");

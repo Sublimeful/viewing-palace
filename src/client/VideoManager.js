@@ -25,8 +25,7 @@ class VideoManager {
         if (video.type == "YouTube" && other.type == "YouTube") {
             return (
                 video.duration == other.duration &&
-                video.id == other.id &&
-                video.title == other.title
+                video.id == other.id
             );
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (

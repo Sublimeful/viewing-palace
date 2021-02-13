@@ -6,7 +6,7 @@ class YouTube {
         this.title = title;
         this.duration = duration;
     }
-    static getId(url, type) {
+    static getVideoId(url, type) {
         const matchVideo = /youtube\.com.*v=([A-z0-9_-]+)/;
         const matchPlaylist = /youtube\.com.*list=([A-z0-9_-]+)/;
         switch (type) {
@@ -17,7 +17,7 @@ class YouTube {
         }
     }
     static requestVideoData(url, id = null) {
-        if (id == null) id = YouTube.getId(url, "Video");
+        if (id == null) id = YouTube.getVideoId(url, "Video");
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)&id=${id}&key=${apiKey}`;
         return new Promise(function (resolve, reject) {
@@ -52,7 +52,7 @@ class YouTube {
         });
     }
     static requestPlaylistData(url) {
-        const id = YouTube.getId(url, "Playlist");
+        const id = YouTube.getVideoId(url, "Playlist");
         const apiKey = "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA";
         const fetchUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&fields=nextPageToken,items(snippet/resourceId/videoId)&playlistId=${id}&key=${apiKey}`;
         return new Promise((resolve, reject) => {

@@ -6,6 +6,7 @@ class Raw
         this.type = "Raw";
         this.contentType = contentType;
         this.url = url;
+        this.title = null;
     }
     static requestVideoData(url)
     {

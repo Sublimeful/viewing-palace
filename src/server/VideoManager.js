@@ -9,17 +9,12 @@ class VideoManager {
         this.timer = new Timer();
     }
     isEqual(video, other) {
-        if(video == null || other == null) return false;
+        if (video == null || other == null) return false;
         if (video.type == "YouTube" && other.type == "YouTube") {
-            return (
-                video.duration == other.duration &&
-                video.id == other.id &&
-                video.title == other.title
-            );
+            return video.duration == other.duration && video.id == other.id;
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
-                video.contentType == other.contentType &&
-                video.url == other.url
+                video.contentType == other.contentType && video.url == other.url
             );
         } else return false;
     }
@@ -54,7 +49,7 @@ class VideoManager {
                 this.timer.getCurrentTime() >
                     this.currentPlaying.duration - 1000
             ) {
-                console.log("Video playback has ended!")
+                console.log("Video playback has ended!");
                 const videoIndex = this.findIndex(this.currentPlaying);
                 this.currentPlaying = null;
                 if (videoIndex + 1 < this.queue.length) {
@@ -84,22 +79,22 @@ class VideoManager {
         }
     }
     enqueue(video) {
-        var duplicateVid = false;
-        this.queue.forEach((otherVid) => {
-            if (this.isEqual(video, otherVid)) {
-                duplicateVid = true;
-                return;
-            }
-        });
-        if (!duplicateVid) {
-            this.queue.push(video);
-            this.io.emit("enqueue", { video: video });
-            if (this.currentPlaying == null) this.playNew(video);
-        }
+        // var duplicateVid = false; <------------------------------ Enable Duplicate videos
+        // this.queue.forEach((otherVid) => {
+        //     if (this.isEqual(video, otherVid)) {
+        //         duplicateVid = true;
+        //         return;
+        //     }
+        // });
+        // if (!duplicateVid) {
+        this.queue.push(video);
+        this.io.emit("enqueue", { video: video });
+        if (this.currentPlaying == null) this.playNew(video);
+        // }
     }
 
     //queues up a video, playnew if no video is on
-    parseInput(userInput) {
+    parseInput(userInput, title = null) {
         const matchYouTubeVideo = /^(https?\:\/\/)?(www.)?(youtube\.com\/watch\?v=|youtube\.com\/|youtu\.be\/)[A-z0-9_-]{11}/;
         const matchYouTubePlaylist = /^(https?\:\/\/)?(www\.)?(youtube\.com\/playlist\?list=)[A-z0-9_-]+/;
 
@@ -107,6 +102,7 @@ class VideoManager {
             const request = YouTube.requestVideoData(userInput);
             request
                 .then((video) => {
+                    video.title = title;
                     this.enqueue(video);
                 })
                 .catch((err) => console.error(err));
@@ -115,6 +111,7 @@ class VideoManager {
             request
                 .then((videos) => {
                     videos.forEach((video) => {
+                        video.title = title;
                         this.enqueue(video);
                     });
                 })
@@ -124,6 +121,7 @@ class VideoManager {
             const request = Raw.requestVideoData(userInput);
             request
                 .then((video) => {
+                    video.title = title;
                     this.enqueue(video);
                 })
                 .catch((err) => console.error(err));

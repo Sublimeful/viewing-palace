@@ -9011,8 +9011,7 @@ class VideoManager {
         if (video.type == "YouTube" && other.type == "YouTube") {
             return (
                 video.duration == other.duration &&
-                video.id == other.id &&
-                video.title == other.title
+                video.id == other.id
             );
         } else if (video.type == "Raw" && other.type == "Raw") {
             return (
@@ -9122,6 +9121,7 @@ module.exports = VideoManager;
 const connect = require("socket.io-client");
 const socket = connect();
 const addVideoInput = document.querySelector("#video-add-input");
+const addVideoTitle = document.querySelector("#video-add-title");
 const signInInput = document.querySelector("#sign-in");
 const leaderButton = document.querySelector("#leader-btn");
 const VideoManager = require("./VideoManager.js");
@@ -9144,7 +9144,7 @@ signInInput.addEventListener("keyup", (event) => {
 addVideoInput.addEventListener("keyup", (event) => {
     if (event.keyCode === 13) {
         event.preventDefault();
-        socket.emit("enqueue", { input: addVideoInput.value });
+        socket.emit("enqueue", { input: addVideoInput.value, title: addVideoTitle.value });
         addVideoInput.value = "";
     }
 });
@@ -9193,7 +9193,7 @@ class Raw {
         this.player.oncanplay = () => {
             this.player.play();
             this.player.ontimeupdate = () => {
-                this.socket.emit("sync", { currentTime: this.player.currentTime, duration: this.player.duration * 1000 });
+                this.socket.emit("sync", { currentTime: this.player.currentTime * 1000, duration: this.player.duration * 1000 });
             };
             this.player.onpause = () => {
                 this.socket.emit("pause");
@@ -9269,7 +9269,7 @@ class YouTube {
             if(this.state == 1)
             {
                 this.player.getCurrentTime().then(time => {
-                    this.socket.emit("sync", {currentTime: time});
+                    this.socket.emit("sync", {currentTime: time * 1000});
                 })
             }
         }, 100)
