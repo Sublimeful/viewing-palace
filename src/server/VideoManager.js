@@ -57,7 +57,8 @@ class VideoManager {
             if (
                 this.currentPlaying != null &&
                 this.timer.getCurrentTime() >
-                    this.currentPlaying.duration - 1000
+                    this.currentPlaying.duration - 1000 &&
+                this.currentPlaying.isLivestream == false
             ) {
                 console.log("Video playback has ended!");
                 this.playNext();

@@ -56,7 +56,15 @@ class VideoManager {
                 this.currentVideo.isLivestream == true &&
                 video.isLivestream == false
             )
-                this.currentVideo.initSyncer(); //initialize the syncer if last was livestream but this is not livestream
+                //initialize the syncer if last was livestream but this is not livestream
+                this.currentVideo.initSyncer();
+            else if (
+                this.currentVideo != null &&
+                this.currentVideo.isLivestream == false &&
+                video.isLivestream == true
+            )
+                //if this video is going to be livestream and last was not, then clear syncer
+                clearInterval(this.currentVideo.syncer);
             if (
                 this.currentVideo != null &&
                 this.currentVideo.type == "YouTube"
