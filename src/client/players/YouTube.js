@@ -20,7 +20,6 @@ class YouTube {
                 case -1:
                     break;
                 case 0:
-                    console.log(this.state);
                     if (this.state == 1)
                         //client skipped and ended video
                         this.socket.emit("videoEnded");
@@ -50,7 +49,6 @@ class YouTube {
     }
     initSyncer() {
         this.syncer = setInterval(() => {
-            console.log("sync");
             if (this.state == 1) {
                 this.player.getCurrentTime().then((time) => {
                     this.socket.emit("sync", { currentTime: time * 1000 });

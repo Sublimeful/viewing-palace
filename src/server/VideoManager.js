@@ -38,6 +38,7 @@ class VideoManager {
     }
     //loads a new video for all users
     playNew(video) {
+        clearInterval(this.videoEndedChecker);
         this.timer.resetTimer();
         this.currentPlaying = video;
         this.io.emit("play", { video: video });
@@ -51,18 +52,21 @@ class VideoManager {
     }
     newVideoStarted() {
         if (this.timer.currentTime != null) return;
-        console.log("new video");
         this.timer.startTimer();
-        var videoEndedChecker = setInterval(() => {
-            if (
-                this.currentPlaying != null &&
-                this.timer.getCurrentTime() >
-                    this.currentPlaying.duration - 1000 &&
-                this.currentPlaying.isLivestream == false
-            ) {
-                console.log("Video playback has ended!");
-                this.playNext();
-                clearInterval(videoEndedChecker);
+        this.videoEndedChecker = setInterval(() => {
+            if (this.currentPlaying != null) {
+                if (this.currentPlaying.isLivestream == false) {
+                    if (
+                        this.timer.getCurrentTime() >
+                        this.currentPlaying.duration - 1000
+                    ) {
+                        this.playNext();
+                    }
+                }
+                else if(this.currentPlaying.isLivestream == true)
+                {
+                    clearInterval(this.videoEndedChecker);
+                }
             }
         }, 1000);
     }

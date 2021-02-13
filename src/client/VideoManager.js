@@ -50,27 +50,18 @@ class VideoManager {
         this.currentVideo.unpause();
     }
     playNew(video) {
+        if (this.currentVideo != null && this.currentVideo.type == "YouTube") //clear interval is currentvid is youtube
+            clearInterval(this.currentVideo.syncer);
         if (video.type == "YouTube") {
             if (
                 this.currentVideo != null &&
                 this.currentVideo.isLivestream == true &&
                 video.isLivestream == false
-            )
+            ) {
                 //initialize the syncer if last was livestream but this is not livestream
                 this.currentVideo.initSyncer();
-            else if (
-                this.currentVideo != null &&
-                this.currentVideo.isLivestream == false &&
-                video.isLivestream == true
-            )
-                //if this video is going to be livestream and last was not, then clear syncer
-                clearInterval(this.currentVideo.syncer);
-            if (
-                this.currentVideo != null &&
-                this.currentVideo.type == "YouTube"
-            )
                 this.currentVideo.player.loadVideoById(video.id);
-            else {
+            } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
                 this.currentVideo = new YouTube(video, this.socket);
             }
