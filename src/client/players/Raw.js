@@ -1,5 +1,5 @@
 class Raw {
-    constructor(video, socket) {
+    constructor(video, socket, videoManager) {
         this.type = "Raw";
         this.socket = socket;
         this.playerElem = document.getElementById("player");
@@ -25,6 +25,7 @@ class Raw {
             this.player.onended = () => {
                 this.socket.emit("videoEnded");
             }
+            videoManager.updateRaw(video, this.player.duration);
         }
     }
     pause() {

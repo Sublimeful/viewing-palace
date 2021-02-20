@@ -73,9 +73,13 @@ class VideoManager {
                 this.currentVideo.player.play();
             } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
-                this.currentVideo = new Raw(video, this.socket);
+                this.currentVideo = new Raw(video, this.socket, this);
             }
         }
+    }
+    updateRaw(video, newDuration)
+    {
+        this.elemQueue[this.findIndex(video)].querySelector(".playlist-video-duration").textContent = newDuration;
     }
     getCurrentTime() {
         if (this.currentVideo != null)
@@ -122,6 +126,7 @@ class VideoManager {
             const queueItem = document.createElement("div");
             queueItem.className = "playlist-video";
             const durationLabel = document.createElement("h1");
+            durationLabel.className = "playlist-video-duration";
             const hours = Math.floor(video.duration / 1000 / 60 / 60);
             const minutes = Math.floor((video.duration / 1000 / 60) % 60);
             const seconds = (video.duration / 1000) % 60;
@@ -132,6 +137,7 @@ class VideoManager {
             durationLabel.textContent +=
                 seconds >= 10 ? seconds : "0" + seconds;
             const titleLabel = document.createElement("h1");
+            titleLabel.className = "playlist-video-title";
             titleLabel.textContent = video.title;
             const delButton = document.createElement("button");
             delButton.textContent = "X";
