@@ -45,6 +45,8 @@ class VideoManager {
     }
     playNext() {
         if (this.currentPlaying == null) return;
+        //whenever playnext is called, it's always when the video is over, so set currentplaying to null
+        //so that when a new video is added to queue, it plays that video
         this.currentPlaying = null;
         const videoIndex = this.findIndex(this.currentPlaying);
         if (videoIndex + 1 < this.queue.length) {
