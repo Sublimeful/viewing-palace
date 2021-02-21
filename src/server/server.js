@@ -33,12 +33,6 @@ io.on("connection", (socket) => {
     socket.on("dequeue", (data) => {
         if (socket.isLeader) videoManager.dequeue(data.video);
     });
-    socket.on("pause", () => {
-        if (socket.isLeader) videoManager.pause(socket);
-    });
-    socket.on("unpause", () => {
-        if (socket.isLeader) videoManager.unpause(socket);
-    });
     socket.on("signIn", (data) => {
         socket.username = data.username;
         socket.isSignedIn = true;
@@ -52,7 +46,7 @@ io.on("connection", (socket) => {
             } else if (socket.isLeader) {
                 socket.isLeader = false;
                 someoneIsLeader = false;
-                videoManager.unpause(socket);
+                videoManager.unpause();
                 socket.emit("unleadered");
             }
         }
@@ -68,10 +62,12 @@ io.on("connection", (socket) => {
         } else if (socket.isLeader && data != null) {
             //if is leader, then set time
             videoManager.timer.setTimer(data.currentTime);
+            data.paused ? videoManager.pause() : videoManager.unpause();
         } else {
             //otherwise sync time with server
             socket.emit("sync", {
                 currentTime: videoManager.timer.getCurrentTime(),
+                paused: videoManager.timer.timeMarker == null
             });
         }
     });
@@ -79,7 +75,7 @@ io.on("connection", (socket) => {
         if (socket.isLeader) {
             socket.isLeader = false;
             someoneIsLeader = false;
-            videoManager.unpause(socket);
+            videoManager.unpause();
         }
     });
 });

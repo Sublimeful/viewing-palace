@@ -10,6 +10,7 @@ class VideoManager {
     socket;
     syncThreshold = 1000;
     videoType;
+    syncer;
     resizeSensor = new ResizeSensor(
         document.querySelector("section#player"),
         () => {
@@ -50,16 +51,13 @@ class VideoManager {
         this.currentVideo.unpause();
     }
     playNew(video) {
-        if (this.currentVideo != null && this.currentVideo.type == "YouTube") //clear interval is currentvid is youtube
-            clearInterval(this.currentVideo.syncer);
+        if (this.currentVideo != null)
+            clearInterval(this.syncer);
         if (video.type == "YouTube") {
             if (
                 this.currentVideo != null &&
-                this.currentVideo.isLivestream == true &&
-                video.isLivestream == false
+                this.currentVideo.type == "YouTube"
             ) {
-                //initialize the syncer if last was livestream but this is not livestream
-                this.currentVideo.initSyncer();
                 this.currentVideo.player.loadVideoById(video.id);
             } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
@@ -76,10 +74,20 @@ class VideoManager {
                 this.currentVideo = new Raw(video, this.socket, this);
             }
         }
+        if(!video.isLivestream)
+            this.initSyncer();
     }
-    updateRaw(video, newDuration)
-    {
-        this.elemQueue[this.findIndex(video)].querySelector(".playlist-video-duration").textContent = newDuration;
+    initSyncer() {
+        this.syncer = setInterval(() => {
+            this.currentVideo.getCurrentTime().then((time) => {
+                this.socket.emit("sync", { currentTime: time * 1000, paused: this.currentVideo.isPaused() });
+            });
+        }, 100);
+    }
+    updateRaw(video, newDuration) {
+        this.elemQueue[this.findIndex(video)].querySelector(
+            ".playlist-video-duration"
+        ).textContent = newDuration;
     }
     getCurrentTime() {
         if (this.currentVideo != null)
@@ -90,12 +98,13 @@ class VideoManager {
         this.queue.splice(index, 1);
         this.elemQueue.splice(index, 1)[0].remove();
     }
-    sync(syncTime) {
+    sync(syncTime, paused) {
         if (this.currentVideo == null) return;
         this.getCurrentTime().then((currentTime) => {
             if (Math.abs(syncTime - currentTime * 1000) >= this.syncThreshold)
                 this.seekTo(syncTime);
         });
+        paused ? this.currentVideo.pause() : this.currentVideo.unpause();
     }
     move(videoIndex, newIndex) {
         if (

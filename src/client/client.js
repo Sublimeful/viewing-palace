@@ -31,19 +31,13 @@ addVideoInput.addEventListener("keyup", (event) => {
 
 var videoManager = new VideoManager(socket);
 socket.on("play", (data) => {
-    videoManager.playNew(data.video);
+    videoManager.playNew(data.video, data.paused);
 });
 socket.on("move", (data) => {
     videoManager.move(data.moveInfo[0], data.moveInfo[1]);
 })
-socket.on("pause", () => {
-    videoManager.pause();
-});
-socket.on("unpause", () => {
-    videoManager.unpause();
-});
 socket.on("sync", (data) => {
-    videoManager.sync(data.currentTime);
+    videoManager.sync(data.currentTime, data.paused);
 });
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";

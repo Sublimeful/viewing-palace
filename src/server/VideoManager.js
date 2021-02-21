@@ -45,6 +45,7 @@ class VideoManager {
     }
     playNext() {
         if (this.currentPlaying == null) return;
+        this.currentPlaying = null;
         const videoIndex = this.findIndex(this.currentPlaying);
         if (videoIndex + 1 < this.queue.length) {
             this.playNew(this.queue[videoIndex + 1]);
@@ -70,12 +71,10 @@ class VideoManager {
             }
         }, 1000);
     }
-    unpause(socket) {
-        socket.broadcast.emit("unpause");
+    unpause() {
         this.timer.unpauseTimer();
     }
-    pause(socket) {
-        socket.broadcast.emit("pause");
+    pause() {
         this.timer.pauseTimer();
     }
     move(videoIndex, newIndex) {

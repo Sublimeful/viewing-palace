@@ -15,6 +15,7 @@ class YouTube {
         });
         this.player.loadVideoById(video.id);
         this.state = this.player.getPlayerState();
+        this.paused = false;
         this.player.on("stateChange", (event) => {
             switch (event.data) {
                 case -1:
@@ -27,12 +28,12 @@ class YouTube {
                 case 1:
                     if (this.state == 2)
                         // Client unpaused video
-                        this.socket.emit("unpause");
+                        this.paused = false;
                     break;
                 case 2:
                     if (this.state == 1)
                         // Client paused video
-                        this.socket.emit("pause");
+                        this.paused = true;
                     break;
                 case 3:
                     if (this.isLivestream == false && this.state == -1)
@@ -44,23 +45,17 @@ class YouTube {
             }
             this.state = event.data;
         });
-        this.player.playVideo();
-        if (this.isLivestream == false) this.initSyncer();
     }
-    initSyncer() {
-        this.syncer = setInterval(() => {
-            if (this.state == 1) {
-                this.player.getCurrentTime().then((time) => {
-                    this.socket.emit("sync", { currentTime: time * 1000 });
-                });
-            }
-        }, 100);
+    isPaused() {
+        return this.paused;
     }
     pause() {
-        this.player.pauseVideo();
+        if(!this.paused)
+            this.player.pauseVideo();
     }
     unpause() {
-        this.player.playVideo();
+        if(this.paused)
+            this.player.playVideo();
     }
     seekTo(time) {
         this.player.seekTo(time / 1000, true);
@@ -75,7 +70,6 @@ class YouTube {
         );
     }
     destroy() {
-        clearInterval(this.syncer);
         this.player.destroy();
     }
 }

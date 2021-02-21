@@ -8996,6 +8996,7 @@ class VideoManager {
     socket;
     syncThreshold = 1000;
     videoType;
+    syncer;
     resizeSensor = new ResizeSensor(
         document.querySelector("section#player"),
         () => {
@@ -9036,16 +9037,13 @@ class VideoManager {
         this.currentVideo.unpause();
     }
     playNew(video) {
-        if (this.currentVideo != null && this.currentVideo.type == "YouTube") //clear interval is currentvid is youtube
-            clearInterval(this.currentVideo.syncer);
+        if (this.currentVideo != null)
+            clearInterval(this.syncer);
         if (video.type == "YouTube") {
             if (
                 this.currentVideo != null &&
-                this.currentVideo.isLivestream == true &&
-                video.isLivestream == false
+                this.currentVideo.type == "YouTube"
             ) {
-                //initialize the syncer if last was livestream but this is not livestream
-                this.currentVideo.initSyncer();
                 this.currentVideo.player.loadVideoById(video.id);
             } else {
                 if (this.currentVideo != null) this.currentVideo.destroy();
@@ -9062,10 +9060,20 @@ class VideoManager {
                 this.currentVideo = new Raw(video, this.socket, this);
             }
         }
+        if(!video.isLivestream)
+            this.initSyncer();
     }
-    updateRaw(video, newDuration)
-    {
-        this.elemQueue[this.findIndex(video)].querySelector(".playlist-video-duration").textContent = newDuration;
+    initSyncer() {
+        this.syncer = setInterval(() => {
+            this.currentVideo.getCurrentTime().then((time) => {
+                this.socket.emit("sync", { currentTime: time * 1000, paused: this.currentVideo.isPaused() });
+            });
+        }, 100);
+    }
+    updateRaw(video, newDuration) {
+        this.elemQueue[this.findIndex(video)].querySelector(
+            ".playlist-video-duration"
+        ).textContent = newDuration;
     }
     getCurrentTime() {
         if (this.currentVideo != null)
@@ -9076,12 +9084,13 @@ class VideoManager {
         this.queue.splice(index, 1);
         this.elemQueue.splice(index, 1)[0].remove();
     }
-    sync(syncTime) {
+    sync(syncTime, paused) {
         if (this.currentVideo == null) return;
         this.getCurrentTime().then((currentTime) => {
             if (Math.abs(syncTime - currentTime * 1000) >= this.syncThreshold)
                 this.seekTo(syncTime);
         });
+        paused ? this.currentVideo.pause() : this.currentVideo.unpause();
     }
     move(videoIndex, newIndex) {
         if (
@@ -9208,19 +9217,13 @@ addVideoInput.addEventListener("keyup", (event) => {
 
 var videoManager = new VideoManager(socket);
 socket.on("play", (data) => {
-    videoManager.playNew(data.video);
+    videoManager.playNew(data.video, data.paused);
 });
 socket.on("move", (data) => {
     videoManager.move(data.moveInfo[0], data.moveInfo[1]);
 })
-socket.on("pause", () => {
-    videoManager.pause();
-});
-socket.on("unpause", () => {
-    videoManager.unpause();
-});
 socket.on("sync", (data) => {
-    videoManager.sync(data.currentTime);
+    videoManager.sync(data.currentTime, data.paused);
 });
 socket.on("leadered", () => {
     leaderButton.style.backgroundColor = "green";
@@ -9242,34 +9245,32 @@ class Raw {
         this.playerElem = document.getElementById("player");
         this.player = document.createElement("video");
         this.playerElem.appendChild(this.player);
-        this.player.setAttribute("controls", "");
-        this.player.setAttribute("autoplay", "");
+        this.player.controls = true;
+        this.player.muted = true;
+        this.player.autoplay = true
         this.player.setAttribute("height", this.playerElem.clientHeight);
         this.player.setAttribute("width", this.playerElem.clientWidth);
         this.player.id = "video-player";
         this.player.src = video.url;
+        this.player.load();
         this.player.oncanplay = () => {
             this.player.play();
-            this.player.ontimeupdate = () => {
-                this.socket.emit("sync", { currentTime: this.player.currentTime * 1000, duration: this.player.duration * 1000 });
-            };
-            this.player.onpause = () => {
-                this.socket.emit("pause");
-            };
-            this.player.play = () => {
-                this.socket.emit("unpause");
-            };
             this.player.onended = () => {
                 this.socket.emit("videoEnded");
             }
             videoManager.updateRaw(video, this.player.duration);
         }
     }
+    isPaused() {
+        return this.player.paused;
+    }
     pause() {
-        this.player.pause();
+        if(!this.player.paused)
+            this.player.pause();
     }
     unpause() {
-        this.player.play();
+        if(this.player.paused)
+            this.player.play();
     }
     seekTo(time) {
         this.player.currentTime = time / 1000;
@@ -9308,6 +9309,7 @@ class YouTube {
         });
         this.player.loadVideoById(video.id);
         this.state = this.player.getPlayerState();
+        this.paused = false;
         this.player.on("stateChange", (event) => {
             switch (event.data) {
                 case -1:
@@ -9320,12 +9322,12 @@ class YouTube {
                 case 1:
                     if (this.state == 2)
                         // Client unpaused video
-                        this.socket.emit("unpause");
+                        this.paused = false;
                     break;
                 case 2:
                     if (this.state == 1)
                         // Client paused video
-                        this.socket.emit("pause");
+                        this.paused = true;
                     break;
                 case 3:
                     if (this.isLivestream == false && this.state == -1)
@@ -9337,23 +9339,17 @@ class YouTube {
             }
             this.state = event.data;
         });
-        this.player.playVideo();
-        if (this.isLivestream == false) this.initSyncer();
     }
-    initSyncer() {
-        this.syncer = setInterval(() => {
-            if (this.state == 1) {
-                this.player.getCurrentTime().then((time) => {
-                    this.socket.emit("sync", { currentTime: time * 1000 });
-                });
-            }
-        }, 100);
+    isPaused() {
+        return this.paused;
     }
     pause() {
-        this.player.pauseVideo();
+        if(!this.paused)
+            this.player.pauseVideo();
     }
     unpause() {
-        this.player.playVideo();
+        if(this.paused)
+            this.player.playVideo();
     }
     seekTo(time) {
         this.player.seekTo(time / 1000, true);
@@ -9368,7 +9364,6 @@ class YouTube {
         );
     }
     destroy() {
-        clearInterval(this.syncer);
         this.player.destroy();
     }
 }
