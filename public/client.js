@@ -9037,8 +9037,7 @@ class VideoManager {
         this.currentVideo.unpause();
     }
     playNew(video) {
-        if (this.currentVideo != null)
-            clearInterval(this.syncer);
+        if (this.currentVideo != null) clearInterval(this.syncer);
         if (video.type == "YouTube") {
             if (
                 this.currentVideo != null &&
@@ -9060,20 +9059,25 @@ class VideoManager {
                 this.currentVideo = new Raw(video, this.socket, this);
             }
         }
-        if(!video.isLivestream)
-            this.initSyncer();
+        if (!video.isLivestream) this.initSyncer();
     }
     initSyncer() {
         this.syncer = setInterval(() => {
             this.currentVideo.getCurrentTime().then((time) => {
-                this.socket.emit("sync", { currentTime: time * 1000, paused: this.currentVideo.isPaused() });
+                this.socket.emit("sync", {
+                    currentTime: time * 1000,
+                    paused: this.currentVideo.isPaused(),
+                });
             });
         }, 100);
     }
     updateRaw(video, newDuration) {
-        this.elemQueue[this.findIndex(video)].querySelector(
-            ".playlist-video-duration"
-        ).textContent = newDuration;
+        const element = this.elemQueue[this.findIndex(video)];
+        if (element) {
+            element.querySelector(
+                ".playlist-video-duration"
+            ).textContent = newDuration;
+        }
     }
     getCurrentTime() {
         if (this.currentVideo != null)
@@ -9246,7 +9250,6 @@ class Raw {
         this.player = document.createElement("video");
         this.playerElem.appendChild(this.player);
         this.player.controls = true;
-        this.player.muted = true;
         this.player.autoplay = true
         this.player.setAttribute("height", this.playerElem.clientHeight);
         this.player.setAttribute("width", this.playerElem.clientWidth);

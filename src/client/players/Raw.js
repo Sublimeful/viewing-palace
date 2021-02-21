@@ -6,7 +6,6 @@ class Raw {
         this.player = document.createElement("video");
         this.playerElem.appendChild(this.player);
         this.player.controls = true;
-        this.player.muted = true;
         this.player.autoplay = true
         this.player.setAttribute("height", this.playerElem.clientHeight);
         this.player.setAttribute("width", this.playerElem.clientWidth);

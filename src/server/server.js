@@ -21,7 +21,11 @@ io.on("connection", (socket) => {
         if (socket.isLeader) videoManager.playNew(data.video);
     });
     socket.on("videoEnded", () => {
-        if (socket.isLeader) videoManager.playNext();
+        if (socket.isLeader) 
+        {
+            console.log("ended");
+            videoManager.playNext();
+        }
     });
     socket.on("move", (data) => {
         if (socket.isLeader)
