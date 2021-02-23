@@ -51,7 +51,10 @@ class VideoManager {
         if (videoIndex + 1 < this.queue.length) {
             this.playNew(this.queue[videoIndex + 1]);
         }
-        this.currentPlaying = null;
+        else
+        {
+            this.currentPlaying = null;
+        }
     }
     newVideoStarted() {
         if (this.timer.currentTime != null) return;
