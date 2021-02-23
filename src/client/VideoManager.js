@@ -8,7 +8,7 @@ class VideoManager {
     queueElem = document.getElementById("playlist");
     currentVideo;
     socket;
-    syncThreshold = 1000;
+    syncThreshold = 2000;
     videoType;
     syncer;
     resizeSensor = new ResizeSensor(
