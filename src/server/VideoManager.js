@@ -9,6 +9,27 @@ class VideoManager {
         this.timer = new Timer();
         this.maxResults = 10;
     }
+    handleSync(data, socket) //handles sync from a socket
+    {
+        if (this.timer.currentTime == null) {
+            if (data.duration != null && this.currentPlaying != null)
+                //only applies for raws whose duration is null
+                this.currentPlaying.duration = data.duration;
+            setTimeout(() => {
+                this.newVideoStarted();
+            }, 1000);
+        } else if (socket.isLeader && data != null) {
+            //if is leader, then set time
+            this.timer.setTimer(data.currentTime);
+            data.paused ? this.pause() : this.unpause();
+        } else {
+            //otherwise sync time with server
+            socket.emit("sync", {
+                currentTime: this.timer.getCurrentTime(),
+                paused: this.timer.timeMarker == null,
+            });
+        }
+    }
     isEqual(video, other) {
         if (video == null || other == null) return false;
         if (video.type == "YouTube" && other.type == "YouTube") {

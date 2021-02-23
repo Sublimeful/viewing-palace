@@ -21,11 +21,7 @@ io.on("connection", (socket) => {
         if (socket.isLeader) videoManager.playNew(data.video);
     });
     socket.on("videoEnded", () => {
-        if (socket.isLeader) 
-        {
-            console.log("ended");
-            videoManager.playNext();
-        }
+        if (socket.isLeader) videoManager.playNext();
     });
     socket.on("move", (data) => {
         if (socket.isLeader)
@@ -56,24 +52,7 @@ io.on("connection", (socket) => {
         }
     });
     socket.on("sync", (data) => {
-        if (videoManager.timer.currentTime == null) {
-            if (data.duration != null && videoManager.currentPlaying != null)
-                //only applies for raws whose duration is null
-                videoManager.currentPlaying.duration = data.duration;
-            setTimeout(() => {
-                videoManager.newVideoStarted();
-            }, 1000);
-        } else if (socket.isLeader && data != null) {
-            //if is leader, then set time
-            videoManager.timer.setTimer(data.currentTime);
-            data.paused ? videoManager.pause() : videoManager.unpause();
-        } else {
-            //otherwise sync time with server
-            socket.emit("sync", {
-                currentTime: videoManager.timer.getCurrentTime(),
-                paused: videoManager.timer.timeMarker == null
-            });
-        }
+        videoManager.handleSync(data, socket);
     });
     socket.on("disconnect", () => {
         if (socket.isLeader) {
